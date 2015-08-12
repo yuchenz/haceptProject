@@ -7,7 +7,7 @@ MAX=10e5
 MIN=-10e5
 
 class Frame:
-	def __init__(self, srcPos, tgtPos):
+	def __init__(self, srcPos, tgtPos, srcTr, tgtTr):
 		"""
 		Initialize a Frame instance.
 
@@ -17,11 +17,21 @@ class Frame:
 		:type tgtPos: a list of tuples
 		:param tgtPos: treeposition on tgt tree
 
+		:type srcTr: nltk.ParentedTree
+		:param srcTr: src tree
+
+		:type tgtTr: nltk.ParentedTree
+		:param tgtTr: tgt tree
+
 		self.srcList and self.tgtList are lists of treepositions.
 
 		"""
 		self.srcList = srcPos
 		self.tgtList = tgtPos
+		self.srcTree = srcTr
+		self.tgtTree = tgtTr
+		self.srcListMatrixPos = self.treeposition2offsetPosition(self.srcList, self.srcTree) 
+		self.tgtListMatrixPos = self.treeposition2offsetPosition(self.tgtList, self.tgtTree) 
 		
 		# two different representation of a subtree alignment
 		self.subtreeAlignment_treepos = None
@@ -82,6 +92,8 @@ class Frame:
 		Merge two Frame instances frame1 and frame 2, 
 		return merged Frame instance.
 
+		frame1 and frame2 must be on the same tree pair.
+
 		:type frame1: Frame
 		:para frame1: a Frame to be merged.
 
@@ -89,14 +101,40 @@ class Frame:
 		:para frame2: a Frame to be merged.
 
 		"""
-		return cls(list(set(frame1.srcList+frame2.srcList)), list(set(frame1.tgtList+frame2.tgtList)))
+		return cls(list(set(frame1.srcList+frame2.srcList)), list(set(frame1.tgtList+frame2.tgtList)), frame1.srcTree, frame1.tgtTree)
 
 	def __str__(self):
 		tmp = 'srcList: ' + str(self.srcList) + '\ttgtList: ' + str(self.tgtList)
-		tmp += '\nsrcSubtree: ' + str(self.subtreeAlignment_treepos[0]) 
-		tmp += '\ttgtSubtree: ' + str(self.subtreeAlignment_treepos[1])
-		tmp += '\nwaMatrixPosition: ' + str(self.subtreeAlignment_waMatrixPos)
+		tmp += '\nsrcList: ' + str(self.srcListMatrixPos) + '\ttgtList: ' + str(self.tgtListMatrixPos)
+		if self.subtreeAlignment_treepos != None:
+			tmp += '\nsrcSubtree: ' + str(self.subtreeAlignment_treepos[0]) 
+			tmp += '\ttgtSubtree: ' + str(self.subtreeAlignment_treepos[1])
+		if self.subtreeAlignment_waMatrixPos != None:
+			tmp += '\nwaMatrixPosition: ' + str(self.subtreeAlignment_waMatrixPos)
 		return tmp
+
+	@staticmethod
+	def treeposition2offsetPosition(subTrPosList, tr):
+		"""
+		Return the offset of the first word and the last word for every subtree in the list.
+
+		:type subTrPosList: a list of tree positions
+		:param subTrPosList: subtrees' tree positions
+
+		:type tr: nltk.ParentedTree
+		:param tr: the tree
+
+		"""
+		offsetList = []
+		trLeaves = tr.leaves()
+		for pos in subTrPosList:
+			subtreeLeaves = tr[pos].leaves()
+			for i in xrange(len(trLeaves)):
+				if ' '.join(trLeaves[i:i+len(subtreeLeaves)]) == ' '.join(subtreeLeaves):
+					x1, x2 = i, i+len(subtreeLeaves)
+					break
+			offsetList.append((x1, x2))
+		return offsetList
 
 	@staticmethod
 	def treeposition2waMatrixPosition(srcTrPos, tgtTrPos, srcTr, tgtTr):
@@ -245,14 +283,14 @@ class SntFrame:
 				continue
 			tgtSpan = self._scanSpan_(span, 'src')
 			if tgtSpan in tgtSubtreeSpanDict:
-				frameSet.add(Frame([srcSubtreeSpanDict[span]], [tgtSubtreeSpanDict[tgtSpan]]))
+				frameSet.add(Frame([srcSubtreeSpanDict[span]], [tgtSubtreeSpanDict[tgtSpan]], self.srcTree, self.tgtTree))
 
 		for span in tgtSubtreeSpanDict:
 			if not self._consistentWithWA_(span, 'tgt'):
 				continue
 			srcSpan = self._scanSpan_(span, 'tgt')
 			if srcSpan in srcSubtreeSpanDict:
-				frameSet.add(Frame([srcSubtreeSpanDict[srcSpan]], [tgtSubtreeSpanDict[span]]))
+				frameSet.add(Frame([srcSubtreeSpanDict[srcSpan]], [tgtSubtreeSpanDict[span]], self.srcTree, self.tgtTree))
 
 		#pdb.set_trace()
 		frameList = self._mergeFrames_(frameSet)
@@ -363,7 +401,16 @@ class SntFrame:
 		return mergedList
 
 	def __str__(self):
-		tmp = ''
+		# src and tgt tree
+		tmp = 'srcTree:\n' + self.srcTree.pprint().encode('utf-8') + '\n\ntgtTree:\n' + self.tgtTree.pprint().encode('utf-8') 
+		# wa matrix
+		tmp += '\n\nwa matrix:\n'
+		for i in xrange(len(self.waMatrix)):
+			for j in xrange(len(self.waMatrix[i])):
+				tmp += str(self.waMatrix[i][j])+' '
+			tmp += '\n'
+		tmp += '\n'
+		# each frame
 		for i, frame in enumerate(self.frameList):
 			tmp += '='*30 + 'frame # ' + str(i) + '='*30 + '\n\n'
 			tmp += frame.__str__() + '\n\n'

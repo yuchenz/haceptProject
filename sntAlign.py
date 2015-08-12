@@ -18,7 +18,7 @@ def sntAlign(sbtrAlignFilename, sntFilename):
 		print tmp1
 		print tmp2
 		if tmp1 == tmp2: 
-			sbtrAlign.append(block)
+			sbtrAlign.append(re.sub('snt[0-9]+', 'snt'+str(i), block))
 			k += 1
 		else:
 			sbtrAlign.append('None')
