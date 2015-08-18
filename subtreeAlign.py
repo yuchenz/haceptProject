@@ -1,11 +1,9 @@
 #!/usr/bin/python2.7
 
 from Frame import Frame, SntFrame
+import sys, pdb
 
-def frameExtract(srcTreeFilename, tgtTreeFilename, waFilename):
-	return SntFrame.loadData(srcTreeFilename, tgtTreeFilename, waFilename)
-
-def randomAlign(frame, srcTr, tgtTr):
+def topAlign(frame, srcTr, tgtTr):
 	"""
 	Return a subtree alignment for a given frame.
 
@@ -24,13 +22,20 @@ def randomAlign(frame, srcTr, tgtTr):
 	"""
 	return (frame.srcList[0], frame.tgtList[0])
 
+def align(srcTreeFilename, tgtTreeFilename, waFilename):
+	sntFrameList = SntFrame.loadData(srcTreeFilename, tgtTreeFilename, waFilename)
+
+	for sntFrame in sntFrameList:
+		sntFrame.subtreeAlign(topAlign)
+
+	return sntFrameList
+
+
 if __name__ == '__main__':
-	import sys
-	sntFrameList = frameExtract(sys.argv[1], sys.argv[2], sys.argv[3])
+	sntFrameList = align(sys.argv[1], sys.argv[2], sys.argv[3])
 
 	outf = open(sys.argv[4], 'w')
 	for i, sntFrame in enumerate(sntFrameList):
-		sntFrame.subtreeAlign(randomAlign)
 		print "sentence pair #", i, "="*30
 		print sntFrame
 		print
@@ -39,4 +44,5 @@ if __name__ == '__main__':
 			outf.write(str(frame.subtreeAlignment_waMatrixPos)+'\n')
 		outf.write('\n')
 	outf.close()
+
 

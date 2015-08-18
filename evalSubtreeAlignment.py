@@ -1,13 +1,12 @@
 #!/usr/bin/python2.7
 
-import sys
+import sys, os
 import codecs
 import re
 import pdb
 from Bead import Bead
 
-def eval(beadsDirname, autoSubtrAlignFilename):
-	import os
+def evaluate(beadsDirname, alignedSntFrameList):
 
 	print "Reading in all beads ..."
 	beadList = []
@@ -16,24 +15,26 @@ def eval(beadsDirname, autoSubtrAlignFilename):
 		beadList.extend(Bead.loadData(os.path.join(beadsDirname, filename)))
 	
 	print "\nComputing p, r, and f ..."
-	autoFBlocks = codecs.open(autoSubtrAlignFilename, 'r', 'utf-8').read().split('\n\n')[:-1]
 
-	assert len(autoFBlocks) == len(beadList), \
+	assert len(alignedSntFrameList) == len(beadList), \
 			'number of auto tree pairs doesn\'t match number of gold beads!!!\n # auto == %d, # gold == %d\n' \
 			% (len(autoFBlocks), len(beadList))
 	
 	truePositive = 0
 	autoPositive = 0
 	correctPositive = 0
-	for i, block in enumerate(autoFBlocks):
-		autoTuples = set([tuple([int(item) for item in line.strip()[1:-1].split(',')]) for line in block.split('\n')[1:]])
+	for i, sntFrame in enumerate(alignedSntFrameList):
+		if sntFrame == None:
+			autoTuples = set([])
+		else:
+			autoTuples = set([frame.subtreeAlignment_waMatrixPos for frame in sntFrame.frameList])
 		correctTuples = set(beadList[i].subtreeAlignment)
 
 		truePositive += len(correctTuples.intersection(autoTuples))
 		autoPositive += len(autoTuples)
 		correctPositive += len(correctTuples)
 	
-	print "\n\ntruePositive = %d" % truePositive
+	print "\ntruePositive = %d" % truePositive
 	print "autoPositive = %d" % autoPositive
 	print "correctPositive = %d" % correctPositive
 	p = truePositive * 1.0 / autoPositive
@@ -44,4 +45,4 @@ def eval(beadsDirname, autoSubtrAlignFilename):
 
 
 if __name__ == "__main__":
-	eval(sys.argv[1], sys.argv[2])
+	pass

@@ -1,10 +1,12 @@
 #!/usr/bin/python2.7
 
 import nltk
-import pdb
+import pdb, sys
 
 MAX=10e5
 MIN=-10e5
+
+debug_log = sys.stderr
 
 class Frame:
 	def __init__(self, srcPos, tgtPos, srcTr, tgtTr):
@@ -203,7 +205,9 @@ class SntFrame:
 
 		"""
 		self.srcTree = srcTree
+		self.srcWordList = srcTree.leaves()
 		self.tgtTree = tgtTree
+		self.tgtWordList = tgtTree.leaves()
 		self.waMatrix = self._makeWaMatrix_(wordAlignment, len(srcTree.leaves()), len(tgtTree.leaves()))
 
 		self.frameList = self._extractFrames_()
@@ -236,11 +240,14 @@ class SntFrame:
 		sntList = []
 		for i in xrange(len(srcTreeList)):
 			if len(srcTreeList[i].leaves()) == 0 or len(tgtTreeList[i].leaves()) == 0:
-				print 'sentence #', i, 'no parse, skipped'
+				#print >> debug_log, 'sentence #', i, 'no parse, skipped',
+				continue
 			else:
-				print 'sentence #', i
+				#print >> debug_log, 'sentence #', i,
 				sntList.append(cls(srcTreeList[i], tgtTreeList[i], waList[i]))
-		
+			if i % 1000 == 0:
+				print >> debug_log, i, '...',
+		print >> debug_log
 		return sntList
 
 	def _makeWaMatrix_(self, wa, nRow, nCol):
