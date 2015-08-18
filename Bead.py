@@ -149,7 +149,7 @@ class Bead:
 		# src tree
 		tmp = self.srcTree.pprint().encode('utf-8')+"\n\n"
 		# tgt tree
-		tmp += str(self.tgtTree)+"\n\n"
+		tmp += self.tgtTree.pprint().encode('utf-8')+"\n\n"
 		# word alignment matrix
 		for i in xrange(len(self.wordAlignment)):
 			for j in xrange(len(self.wordAlignment[i])):

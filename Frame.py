@@ -106,11 +106,11 @@ class Frame:
 		return cls(list(set(frame1.srcList+frame2.srcList)), list(set(frame1.tgtList+frame2.tgtList)), frame1.srcTree, frame1.tgtTree)
 
 	def __str__(self):
-		tmp = 'srcList: ' + str(self.srcList) + '\ttgtList: ' + str(self.tgtList)
-		tmp += '\nsrcList: ' + str(self.srcListMatrixPos) + '\ttgtList: ' + str(self.tgtListMatrixPos)
-		if self.subtreeAlignment_treepos != None:
-			tmp += '\nsrcSubtree: ' + str(self.subtreeAlignment_treepos[0]) 
-			tmp += '\ttgtSubtree: ' + str(self.subtreeAlignment_treepos[1])
+		tmp = '\nsrcList: ' + str(self.srcListMatrixPos) + '\ttgtList: ' + str(self.tgtListMatrixPos)
+		#tmp += 'srcList: ' + str(self.srcList) + '\ttgtList: ' + str(self.tgtList)
+		#if self.subtreeAlignment_treepos != None:
+		#	tmp += '\nsrcSubtree: ' + str(self.subtreeAlignment_treepos[0]) 
+		#	tmp += '\ttgtSubtree: ' + str(self.subtreeAlignment_treepos[1])
 		if self.subtreeAlignment_waMatrixPos != None:
 			tmp += '\nwaMatrixPosition: ' + str(self.subtreeAlignment_waMatrixPos)
 		return tmp
@@ -421,13 +421,13 @@ class SntFrame:
 		for i, frame in enumerate(self.frameList):
 			tmp += '='*30 + 'frame # ' + str(i) + '='*30 + '\n\n'
 			tmp += frame.__str__() + '\n\n'
-			tmp += 'src subtrees:\n'
-			for srcPos in frame.srcList:
-				tmp += self.srcTree[srcPos].pprint().encode('utf-8') + '\n'
-			tmp += '\ntgt subtrees:\n'
-			for tgtPos in frame.tgtList:
-				tmp += self.tgtTree[tgtPos].pprint().encode('utf-8') + '\n'
-			tmp += '\n'
+			#tmp += 'src subtrees:\n'
+			#for srcPos in frame.srcList:
+			#	tmp += self.srcTree[srcPos].pprint().encode('utf-8') + '\n'
+			#tmp += '\ntgt subtrees:\n'
+			#for tgtPos in frame.tgtList:
+			#	tmp += self.tgtTree[tgtPos].pprint().encode('utf-8') + '\n'
+			#tmp += '\n'
 		tmp += '\n'
 		return tmp
 

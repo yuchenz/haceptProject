@@ -1,11 +1,12 @@
 #!/usr/bin/python2.7
 
 import argparse
-import os, sys
+import os, sys, pdb
 import codecs
 from subtreeAlign import align, topAlign
 from sntAlign import sntAlign
 from evalSubtreeAlignment import evaluate
+from Bead import Bead
 
 debug_log = sys.stderr
 out = sys.stdout
@@ -16,6 +17,7 @@ def main():
 	arg_parser.add_argument('-t', '--test_data', help='the directory of the gold data to be subtree aligned for evaluation')
 	arg_parser.add_argument('-d', '--temp_dir', help='directory for storing temporary files and experimental output files')
 	arg_parser.add_argument('-w', '--wa_file', help='filename of the word alignment file (should be stored in temp_dir)')
+	arg_parser.add_argument('-a', '--analysis', help='flag to enable output for analysis, and the directory to store the output files')
 
 	args = arg_parser.parse_args()
 
@@ -28,6 +30,7 @@ def main():
 	wa_file = args.wa_file 
 	temp_dir_files = os.listdir(args.temp_dir)
 	auto_subtree_suffix = '.subtree.auto'
+	analysis_file = 'analysis'
 
 	# step 1: compile data
 	assert compiled_data + lan1_suffix in temp_dir_files and compiled_data + lan2_suffix in temp_dir_files, \
@@ -54,7 +57,32 @@ def main():
 	print >> out, 'subtree alignment evaluation w/ sentence align ...'
 	sntList = [line.split() for line in codecs.open(os.path.join(args.temp_dir, compiled_data + lan2_suffix), 'r', 'utf-8').readlines()]
 	alignedSntFrameList = sntAlign(sntFrameList, sntList)
-	evaluate(args.test_data, alignedSntFrameList)
+
+	print >> out, 'reading in all beads ...'
+	beadList = []
+	for filename in os.listdir(args.test_data):
+		print filename,
+		beadList.extend(Bead.loadData(os.path.join(args.test_data, filename)))
+		
+	evaluate(beadList, alignedSntFrameList)
+
+	# output for analysis
+	if args.analysis:
+		print >> out, 'outputing for analysis ...'
+		outf1 = codecs.open(os.path.join(args.analysis, analysis_file+'.auto'), 'w', 'utf-8')
+		outf2 = codecs.open(os.path.join(args.analysis, analysis_file+'.gold'), 'w', 'utf-8')
+		for i, bead in enumerate(beadList):
+			sntFrame = alignedSntFrameList[i]
+			tmp = '='*30+'snt'+str(i)+'='*30
+			tmp = tmp.encode('utf-8')
+			print >> outf1, tmp
+			print >> outf1, bead.__str__().decode('utf-8')
+			print >> outf1, '\n\n'
+			print >> outf2, tmp
+			print >> outf2, sntFrame.__str__().decode('utf-8')
+			print >> outf2, '\n\n'
+		outf1.close()
+		outf2.close()
 
 
 if __name__ == '__main__':

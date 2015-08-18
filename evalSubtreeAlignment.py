@@ -6,15 +6,8 @@ import re
 import pdb
 from Bead import Bead
 
-def evaluate(beadsDirname, alignedSntFrameList):
-
-	print "Reading in all beads ..."
-	beadList = []
-	for filename in os.listdir(beadsDirname):
-		print filename,
-		beadList.extend(Bead.loadData(os.path.join(beadsDirname, filename)))
-	
-	print "\nComputing p, r, and f ..."
+def evaluate(beadList, alignedSntFrameList):
+	print "\n\nComputing p, r, and f ..."
 
 	assert len(alignedSntFrameList) == len(beadList), \
 			'number of auto tree pairs doesn\'t match number of gold beads!!!\n # auto == %d, # gold == %d\n' \
@@ -34,14 +27,14 @@ def evaluate(beadsDirname, alignedSntFrameList):
 		autoPositive += len(autoTuples)
 		correctPositive += len(correctTuples)
 	
-	print "\ntruePositive = %d" % truePositive
+	print "truePositive = %d" % truePositive
 	print "autoPositive = %d" % autoPositive
 	print "correctPositive = %d" % correctPositive
 	p = truePositive * 1.0 / autoPositive
 	r = truePositive * 1.0 / correctPositive
 	print "\np = %.5f" % p 
 	print "r = %.5f" % r
-	print "f = %.5f" % (2.0 * p * r / (p + r))
+	print "f = %.5f\n" % (2.0 * p * r / (p + r))
 
 
 if __name__ == "__main__":
