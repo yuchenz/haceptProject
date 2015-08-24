@@ -34,15 +34,8 @@ def align(srcTreeFilename, tgtTreeFilename, waFilename):
 if __name__ == '__main__':
 	sntFrameList = align(sys.argv[1], sys.argv[2], sys.argv[3])
 
-	outf = open(sys.argv[4], 'w')
 	for i, sntFrame in enumerate(sntFrameList):
 		print "sentence pair #", i, "="*30
 		print sntFrame
 		print
-		outf.write("snt"+str(i)+'\t'+' '.join(sntFrame.tgtTree.leaves()).encode('utf-8')+'\n')
-		for frame in sntFrame.frameList:
-			outf.write(str(frame.subtreeAlignment_waMatrixPos)+'\n')
-		outf.write('\n')
-	outf.close()
-
 

@@ -210,6 +210,7 @@ class SntFrame:
 		self.tgtWordList = tgtTree.leaves()
 		self.waMatrix = self._makeWaMatrix_(wordAlignment, len(srcTree.leaves()), len(tgtTree.leaves()))
 
+		#pdb.set_trace()
 		self.frameList = self._extractFrames_()
 
 	@classmethod
@@ -320,8 +321,8 @@ class SntFrame:
 		for subtree in tree.subtrees():
 			if subtree.height() <= 2:
 				continue
-			span = sorted([snt.index(leaf) for leaf in subtree.leaves()])
-			spanDict[(span[0], span[-1]+1)] = subtree.treeposition()
+			span = Frame.treeposition2offsetPosition([subtree.treeposition()], tree)[0] 
+			spanDict[(span[0], span[-1])] = subtree.treeposition()
 		return spanDict
 
 	def _consistentWithWA_(self, span, lan):

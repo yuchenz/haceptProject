@@ -69,8 +69,8 @@ def main():
 	# output for analysis
 	if args.analysis:
 		print >> out, 'outputing for analysis ...'
-		outf1 = codecs.open(os.path.join(args.analysis, analysis_file+'.auto'), 'w', 'utf-8')
-		outf2 = codecs.open(os.path.join(args.analysis, analysis_file+'.gold'), 'w', 'utf-8')
+		outf1 = codecs.open(os.path.join(args.analysis, analysis_file+'.gold'), 'w', 'utf-8')
+		outf2 = codecs.open(os.path.join(args.analysis, analysis_file+'.auto'), 'w', 'utf-8')
 		for i, bead in enumerate(beadList):
 			sntFrame = alignedSntFrameList[i]
 			tmp = '='*30+'snt'+str(i)+'='*30
