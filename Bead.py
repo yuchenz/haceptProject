@@ -2,10 +2,10 @@
 
 import nltk
 from Rule import Rule
-from util import cleanData
+import util
 
 class Bead:
-	def __init__(self, srcTree, tgtTree, wordAlignment, subtreeAlignment, leveledSubtreeAlignment):
+	def __init__(self, srcTree, tgtTree, wordAlignment, subtreeAlignment):
 		"""
 		Initialize a Bead instance.
 		
@@ -22,10 +22,10 @@ class Bead:
 		:type subtreeAlignment: a list of 4-tuples
 		:param subtreeAlignment: each tuple (x1, y1, x2, y2) represents the subtree square on the word alignment matrix.
 
-		:type leveledSubtreeAlignment: a dictionary, mapping from a 4-tuple to a list of 4-tuples 
-		:param leveledSubtreeAlignment: each tuple (x1, y1, x2, y2) represents that in the word alignment matrix, from (x1, y1) to (x2, y2) is a subtree; 
+		class parameters:
+		:type self.subtreeAlignmentDic: a dictionary, mapping from a 4-tuple to a list of 4-tuples 
+		:param self.subtreeAlignmentDic: each tuple (x1, y1, x2, y2) represents that in the word alignment matrix, from (x1, y1) to (x2, y2) is a subtree; 
 									the key tuple is one level upper then its list of tuples
-
 		"""
 		self.srcTree = srcTree
 		self.srcSnt = srcTree.leaves()
@@ -33,7 +33,11 @@ class Bead:
 		self.tgtSnt = tgtTree.leaves()
 		self.wordAlignment = wordAlignment
 		self.subtreeAlignment = subtreeAlignment
-		self.subtreeAlignmentDic = leveledSubtreeAlignment
+		# adding unary subtree alignments to the list
+		self.subtreeAlignment.extend(util.waMatrix2unarySubtreeAlignments(self.wordAlignment, self.srcTree, self.tgtTree))
+		self.subtreeAlignment = list(set(self.subtreeAlignment))
+		
+		self.subtreeAlignmentDic = cls._level_(self.subtreeAlignment)
 
 		self.ruleList = self._extractRules_()
 
@@ -49,7 +53,7 @@ class Bead:
 		"""
 		import codecs
 		f = codecs.open(filename, 'r', 'utf-8')
-		blocks = cleanData(f.read()).split('\n\n')
+		blocks = util.cleanData(f.read()).split('\n\n')
 		f.close()
 
 		beadList = []
@@ -140,7 +144,7 @@ class Bead:
 				i += 1
 					
 			if not errFlag:
-				beadList.append(cls(srcTree, tgtTree, wordAlignment, subtreeAlignment, cls._level_(subtreeAlignment)))
+				beadList.append(cls(srcTree, tgtTree, wordAlignment, subtreeAlignment))
 			srcTree, tgtTree, wordAlignment, subtreeAlignment = None, None, None, []
 
 		return beadList
