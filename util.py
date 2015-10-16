@@ -25,7 +25,7 @@ def waMatrix2unarySubtreeAlignments(waMatrix, srcTr, tgtTr):
 	subtreeAlign = []
 	for i in xrange(len(waMatrix)):
 		for j in xrange(len(waMatrix[i])):
-			if waMatrix[i][j] == 1:
+			if waMatrix[i][j] == 1 and sum(waMatrix[i]) == 1 and sum([waMatrix[k][j] for k in xrange(len(waMatrix))]) == 1:
 				srcWordPosition = srcTr.treeposition_spanning_leaves(i, i+1)
 				tgtWordPosition = tgtTr.treeposition_spanning_leaves(j, j+1)
 				if len(srcWordPosition) > 1 and len(tgtWordPosition) > 1 and \
@@ -33,3 +33,12 @@ def waMatrix2unarySubtreeAlignments(waMatrix, srcTr, tgtTr):
 						len(tgtTr[tgtWordPosition[:-2]].leaves()) == 1:
 							subtreeAlign.append((i, j, i+1, j+1))
 	return subtreeAlign
+
+def waMatrix2oneline(waMatrix):
+	oneline = ''
+	for i in xrange(len(waMatrix)):
+		for j in xrange(len(waMatrix[i])):
+			if waMatrix[i][j]:
+				oneline += str(i)+'-'+str(j)+' '
+	return oneline
+

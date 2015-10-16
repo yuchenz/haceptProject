@@ -20,13 +20,35 @@ def topAlign(frame, srcTr, tgtTr):
 	:rvalue: (src subtree treeposition, tgt subtree treeposition) 
 
 	"""
-	return (frame.srcList[0], frame.tgtList[0])
+	return (sorted(frame.srcList)[0], sorted(frame.tgtList)[0])
 
-def align(srcTreeFilename, tgtTreeFilename, waFilename):
+def bottomAlign(frame, srcTr, tgtTr):
+	"""
+	Return a subtree alignment for a given frame.
+
+	:type frame: Frame
+	:param frame: a frame in a tree pair.
+
+	:type srcTr: nltk.ParentedTree
+	:param srcTr: source tree.
+
+	:type tgtTr: nltk.ParentedTree
+	:param tgtTr: target tree.
+
+	:rtype: 2-tuple
+	:rvalue: (src subtree treeposition, tgt subtree treeposition) 
+
+	"""
+	return (sorted(frame.srcList)[-1], sorted(frame.tgtList)[-1])
+
+alignFuncMap = {'top' : topAlign, 'bottom' : bottomAlign}
+
+def align(srcTreeFilename, tgtTreeFilename, waFilename, alignFunc):
 	sntFrameList = SntFrame.loadData(srcTreeFilename, tgtTreeFilename, waFilename)
 
 	for sntFrame in sntFrameList:
-		sntFrame.subtreeAlign(topAlign)
+		if sntFrame:
+			sntFrame.subtreeAlign(alignFuncMap[alignFunc])
 
 	return sntFrameList
 

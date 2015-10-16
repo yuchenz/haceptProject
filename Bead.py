@@ -5,7 +5,7 @@ from Rule import Rule
 import util
 
 class Bead:
-	def __init__(self, srcTree, tgtTree, wordAlignment, subtreeAlignment):
+	def __init__(self, srcTree, tgtTree, wordAlignment, subtreeAlignment, wordRulesFlag=False):
 		"""
 		Initialize a Bead instance.
 		
@@ -22,24 +22,28 @@ class Bead:
 		:type subtreeAlignment: a list of 4-tuples
 		:param subtreeAlignment: each tuple (x1, y1, x2, y2) represents the subtree square on the word alignment matrix.
 
+		:type wordRulesFlag: bool
+		:param wordRulesFlag: True means to add word alignments that are not in the subtree alignments into the ruleList,
+							False means no;
+
 		class parameters:
 		:type self.subtreeAlignmentDic: a dictionary, mapping from a 4-tuple to a list of 4-tuples 
 		:param self.subtreeAlignmentDic: each tuple (x1, y1, x2, y2) represents that in the word alignment matrix, from (x1, y1) to (x2, y2) is a subtree; 
 									the key tuple is one level upper then its list of tuples
+
 		"""
 		self.srcTree = srcTree
-		self.srcSnt = srcTree.leaves()
+		self.srcSnt = [word.lower() for word in srcTree.leaves()]
 		self.tgtTree = tgtTree
-		self.tgtSnt = tgtTree.leaves()
+		self.tgtSnt = [word.lower() for word in tgtTree.leaves()]
 		self.wordAlignment = wordAlignment
 		self.subtreeAlignment = subtreeAlignment
 		# adding unary subtree alignments to the list
 		self.subtreeAlignment.extend(util.waMatrix2unarySubtreeAlignments(self.wordAlignment, self.srcTree, self.tgtTree))
 		self.subtreeAlignment = list(set(self.subtreeAlignment))
 		
-		self.subtreeAlignmentDic = cls._level_(self.subtreeAlignment)
-
-		self.ruleList = self._extractRules_()
+		self.subtreeAlignmentDic = self._level_(self.subtreeAlignment)
+		self.ruleList = self._extractRules_(wordRulesFlag)
 
 	@classmethod
 	def loadData(cls, filename):
@@ -225,12 +229,17 @@ class Bead:
 		else:
 			return False
 
-	def _extractRules_(self):
+	def _extractRules_(self, wordRulesFlag):
 		"""
 		Return a list of rules extracted from this bead.
 
+		:type wordRulesFlag: bool
+		:param wordRulesFlag: True means to add word alignments that are not in the subtree alignments into the ruleList,
+							False means no;
+
 		"""
 		ruleList = []
+		# add in rules with non-terminal Xs
 		for key in self.subtreeAlignmentDic:
 			lhs = 'X'
 			rhsSrc, rhsTgt, align = [], [], []
@@ -239,29 +248,51 @@ class Bead:
 			for square in self.subtreeAlignmentDic[key]:
 				if square[0] != i:
 					for j in xrange(i, square[0]):
-						rhsSrc.append(self.srcSnt[j])
+						rhsSrc.append(j)
 				rhsSrc.append('X')
 				i = square[2]
 			if key[2] != i:
 				for j in xrange(i, key[2]):
-					rhsSrc.append(self.srcSnt[j])
+					rhsSrc.append(j)
 
 			i = key[1]
 			for k, square in enumerate(sorted(self.subtreeAlignmentDic[key], key=lambda x: x[1])):
 				if square[1] != i:
 					for j in xrange(i, square[1]):
-						rhsTgt.append(self.tgtSnt[j])
+						rhsTgt.append(j)
 				rhsTgt.append('X')
 				align.append((self.subtreeAlignmentDic[key].index(square), k))
 				i = square[3]
 			if key[3] != i:
 				for j in xrange(i, key[3]):
-					rhsTgt.append(self.tgtSnt[j])
+					rhsTgt.append(j)
 
-			ruleList.append(Rule(lhs, rhsSrc, rhsTgt, align))
+			ruleList.append(Rule(lhs, rhsSrc, rhsTgt, align, self.wordAlignment, self.srcSnt, self.tgtSnt))
+
+		# add in rules with no non-terminal Xs, i.e. rules that are phrase pairs
+		for key in self.subtreeAlignmentDic:
+			lhs = 'X'
+			rhsSrc, rhsTgt, align = [], [], []   # here align is for the alignment of Xs, not word alignment, so keep empty 
+			for square in self.subtreeAlignmentDic[key]:
+				if square not in self.subtreeAlignmentDic:
+					rhsSrc = range(square[0], square[2])
+					rhsTgt = range(square[1], square[3])
+					ruleList.append(Rule(lhs, rhsSrc, rhsTgt, align, self.wordAlignment, self.srcSnt, self.tgtSnt))
+
+		# if wordRulesFlag, add in rules that are word alignments (i.e. word pairs) but are not subtree alignments
+		if wordRulesFlag:
+			lhs = 'X'
+			rhsSrc, rhsTgt, align = [], [], []   # here align is for the alignment of Xs, not word alignment, so keep empty 
+			for i in xrange(len(self.wordAlignment)):
+				for j in xrange(len(self.wordAlignment[0])):
+					if self.wordAlignment[i][j]:
+						if sum(self.wordAlignment[i]) == 1 and sum([row[j] for row in self.wordAlignment]) == 1:
+							rhsSrc, rhsTgt = [i], [j]
+							tmpRule = Rule(lhs, rhsSrc, rhsTgt, align, self.wordAlignment, self.srcSnt, self.tgtSnt)
+							ruleList.append(tmpRule)
+						break
+
 		return ruleList
-
-
 
 
 if __name__ == "__main__":

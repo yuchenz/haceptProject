@@ -2,9 +2,10 @@
 
 import nltk
 import pdb, sys
+import re
 
-MAX=10e5
-MIN=-10e5
+MAX=int(10e5)
+MIN=int(-10e5)
 
 debug_log = sys.stderr
 
@@ -128,14 +129,15 @@ class Frame:
 
 		"""
 		offsetList = []
-		trLeaves = tr.leaves()
+		cnt = 0
 		for pos in subTrPosList:
-			subtreeLeaves = tr[pos].leaves()
-			for i in xrange(len(trLeaves)):
-				if ' '.join(trLeaves[i:i+len(subtreeLeaves)]) == ' '.join(subtreeLeaves):
-					x1, x2 = i, i+len(subtreeLeaves)
-					break
-			offsetList.append((x1, x2))
+			par = tr[pos]
+			while par != tr:
+				for i in xrange(par.parent_index()):
+					cnt += len(par.parent()[i].leaves())
+				par = par.parent()
+			offsetList.append((cnt, cnt+len(tr[pos].leaves())))
+			cnt = 0
 		return offsetList
 
 	@staticmethod
@@ -159,20 +161,8 @@ class Frame:
 		:rvalue: (x1, y1, x2, y2) represents the subtree square on the word alignment matrix.
 
 		"""
-		srcSubtreeLeaves = srcTr[srcTrPos].leaves()
-		tgtSubtreeLeaves = tgtTr[tgtTrPos].leaves()
-		srcLeaves = srcTr.leaves()
-		tgtLeaves = tgtTr.leaves()
-
-		for i in xrange(len(srcLeaves)):
-			if ' '.join(srcLeaves[i:i+len(srcSubtreeLeaves)]) == ' '.join(srcSubtreeLeaves):
-				x1, x2 = i, i+len(srcSubtreeLeaves)
-				break
-
-		for i in xrange(len(tgtLeaves)):
-			if ' '.join(tgtLeaves[i:i+len(tgtSubtreeLeaves)]) == ' '.join(tgtSubtreeLeaves):
-				y1, y2 = i, i+len(tgtSubtreeLeaves)
-				break
+		x1, x2 = Frame.treeposition2offsetPosition([srcTrPos], srcTr)[0]
+		y1, y2 = Frame.treeposition2offsetPosition([tgtTrPos], tgtTr)[0]
 
 		return (x1, y1, x2, y2)
 
@@ -187,7 +177,14 @@ class Frame:
 		self.subtreeAlignment_treepos = subtreeAlignFunc(self, srcTr, tgtTr)
 		self.subtreeAlignment_waMatrixPos = self.treeposition2waMatrixPosition(self.subtreeAlignment_treepos[0], \
 				self.subtreeAlignment_treepos[1], srcTr, tgtTr) 
-	
+
+	def allPossibleSubtreeAlignment(self):
+		ans = []
+		for srcPos in self.srcListMatrixPos:
+			for tgtPos in self.tgtListMatrixPos:
+				ans.append((srcPos[0], tgtPos[0], srcPos[1], tgtPos[1]))
+		return ans
+
 
 class SntFrame:
 	def __init__(self, srcTree, tgtTree, wordAlignment): 
@@ -205,13 +202,15 @@ class SntFrame:
 
 		"""
 		self.srcTree = srcTree
-		self.srcWordList = srcTree.leaves()
+		self.srcWordList = [word.lower() for word in srcTree.leaves()]
 		self.tgtTree = tgtTree
-		self.tgtWordList = tgtTree.leaves()
+		self.tgtWordList = [word.lower() for word in tgtTree.leaves()]
 		self.waMatrix = self._makeWaMatrix_(wordAlignment, len(srcTree.leaves()), len(tgtTree.leaves()))
 
 		#pdb.set_trace()
 		self.frameList = self._extractFrames_()
+
+		self.ruleList = None
 
 	@classmethod
 	def loadData(cls, srctrFilename, tgttrFilename, waFilename):
@@ -230,25 +229,52 @@ class SntFrame:
 
 		"""
 		import codecs
-		srcTreeList = [nltk.ParentedTree(line) for line in codecs.open(srctrFilename, 'r', 'utf-8').readlines()]
-		tgtTreeList = [nltk.ParentedTree(line) for line in codecs.open(tgttrFilename, 'r', 'utf-8').readlines()]
+		srcTreeList, tgtTreeList = [], []
+		for i, line in enumerate(codecs.open(tgttrFilename, 'r', 'utf-8')):
+			print i, line
+			if ' ()' in line or ' ))' in line:
+				line = re.sub(' \(\)', ' -lbr-)', line)
+				line = re.sub(' \(\(\)', ' -lbr--lbr-)', line)
+				line = re.sub(' \)\)', ' -rbr-)', line)
+				line = re.sub(' \)\.\)', ' -rbr-.)', line)
+			print i, line
+			tmpTr = nltk.ParentedTree(line)
+			tgtTreeList.append(tmpTr)
+
+		for i, line in enumerate(codecs.open(srctrFilename, 'r', 'utf-8')):
+			#print i, line
+			if ' ()' in line or ' ))' in line:
+				line = re.sub(' \(\)', ' -lbr-)', line)
+				line = re.sub(' \)\)', ' -rbr-)', line)
+			#print i, line
+			tmpTr = nltk.ParentedTree(line)
+			srcTreeList.append(tmpTr)
+
 		waList = [[([int(i) for i in item.split('-')[0].split(',')], [int(j) for j in item.split('-')[1].split(',')]) \
 				for item in line.split()] for line in open(waFilename, 'r').readlines()]
 
 		assert(len(srcTreeList) == len(tgtTreeList))
 		assert(len(srcTreeList) == len(waList))
+		#print len(srcTreeList)
+		#pdb.set_trace()
 
 		sntList = []
 		for i in xrange(len(srcTreeList)):
 			if len(srcTreeList[i].leaves()) == 0 or len(tgtTreeList[i].leaves()) == 0:
 				#print >> debug_log, 'sentence #', i, 'no parse, skipped',
-				continue
+				sntList.append(None)
 			else:
 				#print >> debug_log, 'sentence #', i,
+				#print 'sentence #', i
+				#print ' '.join(srcTreeList[i].pprint().split()).encode('utf-8')
+				#print ' '.join(tgtTreeList[i].pprint().split()).encode('utf-8')
+				#print waList[i]
+				#print 
 				sntList.append(cls(srcTreeList[i], tgtTreeList[i], waList[i]))
 			if i % 1000 == 0:
 				print >> debug_log, i, '...',
 		print >> debug_log
+		#pdb.set_trace()
 		return sntList
 
 	def _makeWaMatrix_(self, wa, nRow, nCol):
@@ -282,6 +308,7 @@ class SntFrame:
 		The algorithm used here is explained in details in frameExtractionAlgorithm.pdf
 
 		"""
+		#pdb.set_trace()
 		srcSubtreeSpanDict = self._extractSubtreeSpan_(self.srcTree)
 		tgtSubtreeSpanDict = self._extractSubtreeSpan_(self.tgtTree)
 
@@ -289,16 +316,21 @@ class SntFrame:
 		for span in srcSubtreeSpanDict:
 			if not self._consistentWithWA_(span, 'src'):
 				continue
-			tgtSpan = self._scanSpan_(span, 'src')
-			if tgtSpan in tgtSubtreeSpanDict:
-				frameSet.add(Frame([srcSubtreeSpanDict[span]], [tgtSubtreeSpanDict[tgtSpan]], self.srcTree, self.tgtTree))
+			tgtSpanList = self._scanSpan_(span, 'src')
+			for tgtSpan in tgtSpanList:
+				if tgtSpan in tgtSubtreeSpanDict:
+					#print >> debug_log, span, tgtSpan
+					frameSet.add(Frame([srcSubtreeSpanDict[span]], [tgtSubtreeSpanDict[tgtSpan]], self.srcTree, self.tgtTree))
 
+		#print >> debug_log, '\n'
 		for span in tgtSubtreeSpanDict:
 			if not self._consistentWithWA_(span, 'tgt'):
 				continue
-			srcSpan = self._scanSpan_(span, 'tgt')
-			if srcSpan in srcSubtreeSpanDict:
-				frameSet.add(Frame([srcSubtreeSpanDict[srcSpan]], [tgtSubtreeSpanDict[span]], self.srcTree, self.tgtTree))
+			srcSpanList = self._scanSpan_(span, 'tgt')
+			for srcSpan in srcSpanList:
+				if srcSpan in srcSubtreeSpanDict:
+					#print >> debug_log, srcSpan, span
+					frameSet.add(Frame([srcSubtreeSpanDict[srcSpan]], [tgtSubtreeSpanDict[span]], self.srcTree, self.tgtTree))
 
 		#pdb.set_trace()
 		frameList = self._mergeFrames_(frameSet)
@@ -342,14 +374,17 @@ class SntFrame:
 		else:
 			wordAlign = [[self.waMatrix[i][j] for i in xrange(len(self.waMatrix))] for j in xrange(len(self.waMatrix[0]))] 
 
+		pos1 = [j for i in xrange(span[0], span[1]) for j in xrange(len(wordAlign[i])) if wordAlign[i][j] == 1]
+		if pos1 == []: return True
+
 		for i in xrange(span[0], span[1]):
-			for j in xrange(len(wordAlign[i])):
-				if wordAlign[i][j] == 1:
-					for k in xrange(len(wordAlign)):
-						if k in range(span[0], span[1]):
-							continue
-						if wordAlign[k][j] == 1:
-							return False
+			for j in xrange(min(pos1), max(pos1) + 1):
+				if sum([wordAlign[row][j] for row in xrange(len(wordAlign[:span[0]]))]) == 0 and \
+						sum([wordAlign[row][j] for row in xrange(span[1], len(wordAlign))]) == 0:
+					continue
+				else:
+					return False
+		#print >> debug_log, 'consistent:', span
 		return True
 
 	def _scanSpan_(self, span, lan):
@@ -378,7 +413,24 @@ class SntFrame:
 					if j+1 > otherSpan[1]:
 						otherSpan[1] = j+1
 
-		return tuple(otherSpan)
+		if otherSpan[0] == MAX or otherSpan[1] == MIN:
+			return []
+
+		# relax span to include not-aligned words
+		otherSpanList = []
+		for j in xrange(otherSpan[0]-1, -1, -1):
+			if sum([wordAlign[i][j] for i in xrange(len(wordAlign))]) == 0:
+				otherSpanList.append((j, otherSpan[1]))
+			else:
+				break
+		for j in xrange(otherSpan[1], len(wordAlign[0])):
+			if sum([wordAlign[i][j] for i in xrange(len(wordAlign))]) == 0:
+				otherSpanList.append((otherSpan[0], j+1))
+			else:
+				break
+
+		otherSpanList.append(tuple(otherSpan))
+		return otherSpanList 
 
 	def _mergeFrames_(self, frameSet):
 		"""
@@ -429,6 +481,10 @@ class SntFrame:
 			#for tgtPos in frame.tgtList:
 			#	tmp += self.tgtTree[tgtPos].pprint().encode('utf-8') + '\n'
 			#tmp += '\n'
+		if self.ruleList:
+			tmp += '\nruleList:\n'
+			for rule in self.ruleList:
+				tmp += rule.__str__()
 		tmp += '\n'
 		return tmp
 
