@@ -229,26 +229,10 @@ class SntFrame:
 
 		"""
 		import codecs
-		srcTreeList, tgtTreeList = [], []
-		for i, line in enumerate(codecs.open(tgttrFilename, 'r', 'utf-8')):
-			print i, line
-			if ' ()' in line or ' ))' in line:
-				line = re.sub(' \(\)', ' -lbr-)', line)
-				line = re.sub(' \(\(\)', ' -lbr--lbr-)', line)
-				line = re.sub(' \)\)', ' -rbr-)', line)
-				line = re.sub(' \)\.\)', ' -rbr-.)', line)
-			print i, line
-			tmpTr = nltk.ParentedTree(line)
-			tgtTreeList.append(tmpTr)
 
-		for i, line in enumerate(codecs.open(srctrFilename, 'r', 'utf-8')):
-			#print i, line
-			if ' ()' in line or ' ))' in line:
-				line = re.sub(' \(\)', ' -lbr-)', line)
-				line = re.sub(' \)\)', ' -rbr-)', line)
-			#print i, line
-			tmpTr = nltk.ParentedTree(line)
-			srcTreeList.append(tmpTr)
+		srcTreeList = [nltk.ParentedTree(re.sub(' \(\)', ' -lbr-)', re.sub(' \)\)', ' -rbr-)', line))) for line in codecs.open(srctrFilename, 'r', 'utf-8')]
+		#srcTreeList = [nltk.ParentedTree(line) for line in codecs.open(srctrFilename, 'r', 'utf-8')]
+		tgtTreeList = [nltk.ParentedTree(line) for line in codecs.open(tgttrFilename, 'r', 'utf-8')]
 
 		waList = [[([int(i) for i in item.split('-')[0].split(',')], [int(j) for j in item.split('-')[1].split(',')]) \
 				for item in line.split()] for line in open(waFilename, 'r').readlines()]
