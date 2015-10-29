@@ -3,6 +3,11 @@
 import nltk
 import pdb, sys
 import re
+import codecs
+import multiprocessing as mp
+import os
+import time
+from Bead import Bead
 
 MAX=int(10e5)
 MIN=int(-10e5)
@@ -185,9 +190,8 @@ class Frame:
 				ans.append((srcPos[0], tgtPos[0], srcPos[1], tgtPos[1]))
 		return ans
 
-
 class SntFrame:
-	def __init__(self, srcTree, tgtTree, wordAlignment): 
+	def __init__(self, srcTree, tgtTree, wordAlignment, alignFunc, ruleExFlag, wordRulesFlag): 
 		"""
 		Initialize a FrameList instance.
 
@@ -209,12 +213,19 @@ class SntFrame:
 
 		#pdb.set_trace()
 		self.frameList = self._extractFrames_()
+		self.subtreeAlign(alignFunc)
 
 		self.ruleList = None
+		if ruleExFlag:
+			tmpSuba = [frame.subtreeAlignment_waMatrixPos for frame in self.frameList]
+			tmpBead = Bead(self.srcTree, self.tgtTree, self.waMatrix, tmpSuba, wordRulesFlag)
+			self.ruleList = tmpBead.ruleList
 
+	"""
+	# old version return a list
 	@classmethod
 	def loadData(cls, srctrFilename, tgttrFilename, waFilename):
-		"""
+		'''
 		Return a list of SntFrame instances.
 		Load source trees, target trees, and word alignments from three parallel files, and create Frame instances.
 
@@ -227,11 +238,10 @@ class SntFrame:
 		:type waFilename: str
 		:param waFilename: filename for word alignments 
 
-		"""
-		import codecs
+		'''
 
-		srcTreeList = [nltk.ParentedTree(re.sub(' \(\)', ' -lbr-)', re.sub(' \)\)', ' -rbr-)', line))) for line in codecs.open(srctrFilename, 'r', 'utf-8')]
-		#srcTreeList = [nltk.ParentedTree(line) for line in codecs.open(srctrFilename, 'r', 'utf-8')]
+		#srcTreeList = [nltk.ParentedTree(re.sub(' \(\)', ' -lbr-)', re.sub(' \)\)', ' -rbr-)', line))) for line in codecs.open(srctrFilename, 'r', 'utf-8')]
+		srcTreeList = [nltk.ParentedTree(line) for line in codecs.open(srctrFilename, 'r', 'utf-8')]
 		tgtTreeList = [nltk.ParentedTree(line) for line in codecs.open(tgttrFilename, 'r', 'utf-8')]
 
 		waList = [[([int(i) for i in item.split('-')[0].split(',')], [int(j) for j in item.split('-')[1].split(',')]) \
@@ -260,6 +270,7 @@ class SntFrame:
 		print >> debug_log
 		#pdb.set_trace()
 		return sntList
+	"""
 
 	def _makeWaMatrix_(self, wa, nRow, nCol):
 		"""
@@ -480,12 +491,36 @@ class SntFrame:
 		for frame in self.frameList:
 			frame.subtreeAlign(subtreeAlignFunc, self.srcTree, self.tgtTree)
 
+def loadData(srcTr, tgtTr, wa, alignFunc, ruleExFlag, wordRulesFlag):
+	srcTr = nltk.ParentedTree(srcTr)
+	tgtTr = nltk.ParentedTree(tgtTr)
+	if len(srcTr.leaves()) == 0 or len(tgtTr.leaves()) == 0:
+		return None
+	else:
+		return SntFrame(srcTr, tgtTr, wa, alignFunc, ruleExFlag, wordRulesFlag)
+
+def loadDataParallelWrapper(srctrFilename, tgttrFilename, waFilename, numProc, alignFunc, ruleExFlag, wordRulesFlag):
+	s = time.time()
+	#srcTreeList = [nltk.ParentedTree(re.sub(' \(\)', ' -lbr-)', re.sub(' \)\)', ' -rbr-)', line))) for line in codecs.open(srctrFilename, 'r', 'utf-8')]
+	srcTreeList = codecs.open(srctrFilename, 'r', 'utf-8').readlines()
+	tgtTreeList = codecs.open(tgttrFilename, 'r', 'utf-8').readlines()
+
+	waList = [[(tuple([int(i) for i in item.split('-')[0].split(',')]), tuple([int(j) for j in item.split('-')[1].split(',')])) \
+			for item in line.split()] for line in open(waFilename, 'r').readlines()]
+
+	assert(len(srcTreeList) == len(tgtTreeList))
+	assert(len(srcTreeList) == len(waList))
+	print 'reading in all data time: ', time.time() - s, 's'
+
+	pool = mp.Pool(processes = numProc)
+	sntList = [pool.apply_async(loadData, args=(srcTreeList[i], tgtTreeList[i], waList[i], alignFunc, ruleExFlag, wordRulesFlag)) for i in xrange(len(waList))]
+	return [snt.get() for snt in sntList]
+
 if __name__ == "__main__":
 	"""
 	python2.7 Frame.py chtb_0008.srctr chtb_0008.tgttr chtb_0008.wa
 	
 	"""
-	import sys
 	sntList = SntFrame.loadData(sys.argv[1], sys.argv[2], sys.argv[3])
 
 	for i, sntFrame in enumerate(sntList):

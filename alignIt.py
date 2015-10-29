@@ -7,6 +7,7 @@ from subtreeAlign import align, topAlign
 from sntAlign import sntAlign
 from evalSubtreeAlignment import evaluate
 from Bead import Bead
+import time
 
 debug_log = sys.stderr
 out = sys.stdout
@@ -26,6 +27,7 @@ def main():
 	arg_parser.add_argument('--ssuffix', help='subtree alignment file suffix', default='suba')
 
 	arg_parser.add_argument('--align_func', help='subtree alignment function', default='bottom')
+	arg_parser.add_argument('--num_proc', type=int, help='number of parallel processes', default=24)
 
 	arg_parser.add_argument('--soft_eval', action='store_true', help='evaluation: if any frame contains a gold subtree alignment, \
 			count it as one correct alignment point', default=False)
@@ -63,12 +65,14 @@ def main():
 			(compiled_data + lan1_suffix + bps_suffix, compiled_data + lan2_suffix + bps_suffix)
 	print >> out, 'parsed files ready!', compiled_data + lan1_suffix + bps_suffix, compiled_data + lan2_suffix + bps_suffix 
 
-	# step 4: subtree alignment w/ frame extraction
+	# step 4: subtree alignment w/ frame extraction & rule extraction if turned on
 	print >> out, 'subtree alignment w/ frame extraction ...'
+	s = time.time()
 	sntFrameList = align(os.path.join(args.temp_dir, compiled_data + lan1_suffix + bps_suffix), 
 			os.path.join(args.temp_dir, compiled_data + lan2_suffix + bps_suffix),
-			os.path.join(args.temp_dir, wa_file), args.align_func) 
+			os.path.join(args.temp_dir, wa_file), args.align_func, args.num_proc, args.ex, args.wordRulesFlag)
 	print >> out, 'sntFrameList size: ', len(sntFrameList)
+	print >> out, 'subtree alignment time: ', time.time() - s, 's'
 
 	# step 5: subtree alignment evaluation w/ sentence align
 	print >> out, 'subtree alignment evaluation w/ sentence align ...'
@@ -80,16 +84,14 @@ def main():
 	evaluate(os.path.join(args.temp_dir, compiled_data + suba_suffix), alignedSntFrameList, args.soft_eval, args.analysis)
 
 	# if rule extraction
-	print >> out, 'outputing extracted rules in moses format ...'
 	if args.ex:
+		print >> out, 'outputing extracted rules in moses format ...'
+		s = time.time()
 		ans, ans1 = [], []
 		for sntFrame in alignedSntFrameList:
 			#pdb.set_trace()
 			if sntFrame == None:
 				continue
-			tmpSuba = [frame.subtreeAlignment_waMatrixPos for frame in sntFrame.frameList]
-			tmpBead = Bead(sntFrame.srcTree, sntFrame.tgtTree, sntFrame.waMatrix, tmpSuba, args.wordRulesFlag)
-			sntFrame.ruleList = tmpBead.ruleList
 			# put extracted rules into rule files
 			for rule in sntFrame.ruleList:
 				ruleNInv, ruleInv = rule.mosesFormatRule()
@@ -97,11 +99,14 @@ def main():
 				ans1.append(ruleInv)
 
 		ans.sort(); ans1.sort()
+		print >> out, 'sorting rules / inversed rules time: ', time.time() - s, 's'
+		s = time.time()
 		outf = codecs.open(os.path.join(args.temp_dir, args.stem+'.exRules'), 'w', 'utf-8')
 		outf1 = codecs.open(os.path.join(args.temp_dir, args.stem+'.inv.exRules'), 'w', 'utf-8')
 		for a in ans: outf.write(a)
 		for a in ans1: outf1.write(a)
 		outf.close(); outf1.close()
+		print >> out, 'output all rules time: ', time.time() - s, 's'
 
 	# if output for analysis
 	if args.analysis:

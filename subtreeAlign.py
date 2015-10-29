@@ -1,7 +1,7 @@
 #!/usr/bin/python2.7
 
-from Frame import Frame, SntFrame
-import sys, pdb
+from Frame import Frame, SntFrame, loadDataParallelWrapper
+import sys, pdb, os
 
 def topAlign(frame, srcTr, tgtTr):
 	"""
@@ -43,15 +43,9 @@ def bottomAlign(frame, srcTr, tgtTr):
 
 alignFuncMap = {'top' : topAlign, 'bottom' : bottomAlign}
 
-def align(srcTreeFilename, tgtTreeFilename, waFilename, alignFunc):
-	sntFrameList = SntFrame.loadData(srcTreeFilename, tgtTreeFilename, waFilename)
-
-	for sntFrame in sntFrameList:
-		if sntFrame:
-			sntFrame.subtreeAlign(alignFuncMap[alignFunc])
-
+def align(srcTreeFilename, tgtTreeFilename, waFilename, alignFunc, numProc, ruleExFlag, wordRulesFlag):
+	sntFrameList = loadDataParallelWrapper(srcTreeFilename, tgtTreeFilename, waFilename, numProc, alignFuncMap[alignFunc], ruleExFlag, wordRulesFlag)
 	return sntFrameList
-
 
 if __name__ == '__main__':
 	sntFrameList = align(sys.argv[1], sys.argv[2], sys.argv[3])
