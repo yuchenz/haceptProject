@@ -491,30 +491,58 @@ class SntFrame:
 		for frame in self.frameList:
 			frame.subtreeAlign(subtreeAlignFunc, self.srcTree, self.tgtTree)
 
-def loadData(srcTr, tgtTr, wa, alignFunc, ruleExFlag, wordRulesFlag):
-	srcTr = nltk.ParentedTree(srcTr)
-	tgtTr = nltk.ParentedTree(tgtTr)
-	if len(srcTr.leaves()) == 0 or len(tgtTr.leaves()) == 0:
-		return None
-	else:
-		return SntFrame(srcTr, tgtTr, wa, alignFunc, ruleExFlag, wordRulesFlag)
+def loadData(srcTrList, tgtTrList, waList, alignFunc, ruleExFlag, wordRulesFlag, minMemFlag):
+	result = []
+	for i in xrange(len(waList)):
+		srcTr = nltk.ParentedTree(srcTrList[i])
+		tgtTr = nltk.ParentedTree(tgtTrList[i])
+		wa = [item.split('-') for item in waList[i].split()]
+		wa = [([int(i) for i in item[0].split(',')], [int(j) for j in item[1].split(',')]) for item in wa]
 
-def loadDataParallelWrapper(srctrFilename, tgttrFilename, waFilename, numProc, alignFunc, ruleExFlag, wordRulesFlag):
+		if len(srcTr.leaves()) == 0 or len(tgtTr.leaves()) == 0:
+			result.append(None)
+		else:
+			tmpSntFrame = SntFrame(srcTr, tgtTr, wa, alignFunc, ruleExFlag, wordRulesFlag)
+			if minMemFlag:
+				tmpSntFrame.srcTree, tmpSntFrame.srcWordList, tmpSntFrame.tgtTree, tmpSntFrame.tgtWordList = None, None, None, None
+				tmpSntFrame.waMatrix, tmpSntFrame.frameList = None, None
+
+			result.append(tmpSntFrame)
+	
+	return result
+
+def loadDataParallelWrapper(srctrFilename, tgttrFilename, waFilename, numProc, alignFunc, ruleExFlag, wordRulesFlag, minMemFlag):
 	s = time.time()
 	#srcTreeList = [nltk.ParentedTree(re.sub(' \(\)', ' -lbr-)', re.sub(' \)\)', ' -rbr-)', line))) for line in codecs.open(srctrFilename, 'r', 'utf-8')]
 	srcTreeList = codecs.open(srctrFilename, 'r', 'utf-8').readlines()
-	tgtTreeList = codecs.open(tgttrFilename, 'r', 'utf-8').readlines()
+	print 'srcTreeList:', len(srcTreeList)
+	tgtTreeList = codecs.open(tgttrFilename, 'r', 'utf-8').read().split('\n')[:-1]
+	print 'tgtTreeList:', len(tgtTreeList)
+	waList = open(waFilename, 'r').readlines()
 
-	waList = [[(tuple([int(i) for i in item.split('-')[0].split(',')]), tuple([int(j) for j in item.split('-')[1].split(',')])) \
-			for item in line.split()] for line in open(waFilename, 'r').readlines()]
+	#waList = [[(tuple([int(i) for i in item.split('-')[0].split(',')]), tuple([int(j) for j in item.split('-')[1].split(',')])) \
+	#		for item in line.split()] for line in open(waFilename, 'r').readlines()]
+	print 'waList:', len(waList)
+	print 'reading in all data time: ', time.time() - s, 's'
 
 	assert(len(srcTreeList) == len(tgtTreeList))
 	assert(len(srcTreeList) == len(waList))
-	print 'reading in all data time: ', time.time() - s, 's'
 
-	pool = mp.Pool(processes = numProc)
-	sntList = [pool.apply_async(loadData, args=(srcTreeList[i], tgtTreeList[i], waList[i], alignFunc, ruleExFlag, wordRulesFlag)) for i in xrange(len(waList))]
-	return [snt.get() for snt in sntList]
+	if numProc > 1:
+		pool = mp.Pool(processes = numProc)
+		sntList = []
+		tmp = []
+		base = len(waList) / (numProc - 1)
+		for i in xrange(1, numProc + 1):
+			start = base * (i - 1)
+			end = base * i
+			tmp.append(pool.apply_async(loadData, args=(srcTreeList[start:end], tgtTreeList[start:end], waList[start:end], alignFunc, ruleExFlag, wordRulesFlag, minMemFlag)))
+
+		for t in tmp:
+			sntList.extend(t.get())
+	else:
+		sntList = loadData(srcTreeList, tgtTreeList, waList, alignFunc, ruleExFlag, wordRulesFlag, minMemFlag)
+	return sntList 
 
 if __name__ == "__main__":
 	"""

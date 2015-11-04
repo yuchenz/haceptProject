@@ -35,6 +35,9 @@ def main():
 	arg_parser.add_argument('--ex', action='store_true', help='turn on rule extraction', default=False)
 	arg_parser.add_argument('--wordRulesFlag', action='store_true', help='turn on word level rule extraction, \
 			i.e. add word alignments that are not in subtree alignments to the rule table', default=False)
+	arg_parser.add_argument('--evalFlag', action='store_true', help='turn on subtree alignment evaluation', default=False)
+	arg_parser.add_argument('--minMemFlag', action='store_true', help='turn on minimizing memory use \
+			(in this mode, only rule extraction can be done, no subtree alignment evaluation)', default=False)
 
 	args = arg_parser.parse_args()
 
@@ -70,18 +73,22 @@ def main():
 	s = time.time()
 	sntFrameList = align(os.path.join(args.temp_dir, compiled_data + lan1_suffix + bps_suffix), 
 			os.path.join(args.temp_dir, compiled_data + lan2_suffix + bps_suffix),
-			os.path.join(args.temp_dir, wa_file), args.align_func, args.num_proc, args.ex, args.wordRulesFlag)
+			os.path.join(args.temp_dir, wa_file), args.align_func, args.num_proc, args.ex, args.wordRulesFlag, args.minMemFlag)
 	print >> out, 'sntFrameList size: ', len(sntFrameList)
 	print >> out, 'subtree alignment time: ', time.time() - s, 's'
 
-	# step 5: subtree alignment evaluation w/ sentence align
-	print >> out, 'subtree alignment evaluation w/ sentence align ...'
-	sntList = [line.split() for line in codecs.open(os.path.join(args.temp_dir, compiled_data + lan2_suffix), 'r', 'utf-8').readlines()]
-	print >> out, 'sntList size: ', len(sntList)
-	alignedSntFrameList = sntAlign(sntFrameList, sntList)
-	print >> out, 'alignedSntFrameList size: ', len(alignedSntFrameList)
+	# [old version] step 5: subtree alignment evaluation w/ sentence align
+	#print >> out, 'subtree alignment evaluation w/ sentence align ...'
+	#sntList = [line.split() for line in codecs.open(os.path.join(args.temp_dir, compiled_data + lan2_suffix), 'r', 'utf-8').readlines()]
+	#print >> out, 'sntList size: ', len(sntList)
+	#alignedSntFrameList = sntAlign(sntFrameList, sntList)
+	#print >> out, 'alignedSntFrameList size: ', len(alignedSntFrameList)
 
-	evaluate(os.path.join(args.temp_dir, compiled_data + suba_suffix), alignedSntFrameList, args.soft_eval, args.analysis)
+	# [new version] step 5: subtree alignment evaluation w/ sentence align
+	alignedSntFrameList = sntFrameList
+
+	if args.evalFlag and not args.minMemFlag:
+		evaluate(os.path.join(args.temp_dir, compiled_data + suba_suffix), alignedSntFrameList, args.soft_eval, args.analysis)
 
 	# if rule extraction
 	if args.ex:
@@ -101,8 +108,10 @@ def main():
 		ans.sort(); ans1.sort()
 		print >> out, 'sorting rules / inversed rules time: ', time.time() - s, 's'
 		s = time.time()
-		outf = codecs.open(os.path.join(args.temp_dir, args.stem+'.exRules'), 'w', 'utf-8')
-		outf1 = codecs.open(os.path.join(args.temp_dir, args.stem+'.inv.exRules'), 'w', 'utf-8')
+		outf = codecs.open(os.path.join('/dev/shm/', args.stem+'.exRules'), 'w', 'utf-8')
+		outf1 = codecs.open(os.path.join('/dev/shm/', args.stem+'.inv.exRules'), 'w', 'utf-8')
+		#outf = codecs.open(os.path.join(args.temp_dir, args.stem+'.exRules'), 'w', 'utf-8')
+		#outf1 = codecs.open(os.path.join(args.temp_dir, args.stem+'.inv.exRules'), 'w', 'utf-8')
 		for a in ans: outf.write(a)
 		for a in ans1: outf1.write(a)
 		outf.close(); outf1.close()
