@@ -70,12 +70,12 @@ def main():
 
 	# step 4: subtree alignment w/ frame extraction & rule extraction if turned on
 	print >> out, 'subtree alignment w/ frame extraction ...'
-	s = time.time()
+	s = time.clock()
 	sntFrameList = align(os.path.join(args.temp_dir, compiled_data + lan1_suffix + bps_suffix), 
 			os.path.join(args.temp_dir, compiled_data + lan2_suffix + bps_suffix),
 			os.path.join(args.temp_dir, wa_file), args.align_func, args.num_proc, args.ex, args.wordRulesFlag, args.minMemFlag)
 	print >> out, 'sntFrameList size: ', len(sntFrameList)
-	print >> out, 'subtree alignment time: ', time.time() - s, 's'
+	print >> out, 'subtree alignment time: ', time.clock() - s
 
 	# [old version] step 5: subtree alignment evaluation w/ sentence align
 	#print >> out, 'subtree alignment evaluation w/ sentence align ...'
@@ -93,21 +93,27 @@ def main():
 	# if rule extraction
 	if args.ex:
 		print >> out, 'outputing extracted rules in moses format ...'
-		s = time.time()
+		s = time.clock()
 		ans, ans1 = [], []
-		for sntFrame in alignedSntFrameList:
-			#pdb.set_trace()
-			if sntFrame == None:
-				continue
-			# put extracted rules into rule files
-			for rule in sntFrame.ruleList:
-				ruleNInv, ruleInv = rule.mosesFormatRule()
-				ans.append(ruleNInv)
-				ans1.append(ruleInv)
+		if args.minMemFlag:
+			for rule in codecs.open('/dev/shm/hacept/rule.all', 'r', 'utf-8'):
+				ans.append(rule)
+			for rule in codecs.open('/dev/shm/hacept/ruleInv.all', 'r', 'utf-8'):
+				ans1.append(rule)
+		else:
+			for sntFrame in alignedSntFrameList:
+				#pdb.set_trace()
+				if sntFrame == None:
+					continue
+				# put extracted rules into rule files
+				for rule in sntFrame.ruleList:
+					ruleNInv, ruleInv = rule.mosesFormatRule()
+					ans.append(ruleNInv)
+					ans1.append(ruleInv)
 
 		ans.sort(); ans1.sort()
-		print >> out, 'sorting rules / inversed rules time: ', time.time() - s, 's'
-		s = time.time()
+		print >> out, 'sorting rules / inversed rules time: ', time.clock() - s
+		s = time.clock()
 		outf = codecs.open(os.path.join('/dev/shm/', args.stem+'.exRules'), 'w', 'utf-8')
 		outf1 = codecs.open(os.path.join('/dev/shm/', args.stem+'.inv.exRules'), 'w', 'utf-8')
 		#outf = codecs.open(os.path.join(args.temp_dir, args.stem+'.exRules'), 'w', 'utf-8')
@@ -115,7 +121,7 @@ def main():
 		for a in ans: outf.write(a)
 		for a in ans1: outf1.write(a)
 		outf.close(); outf1.close()
-		print >> out, 'output all rules time: ', time.time() - s, 's'
+		print >> out, 'output all rules time: ', time.clock() - s
 
 	# if output for analysis
 	if args.analysis:

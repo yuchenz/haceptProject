@@ -491,28 +491,42 @@ class SntFrame:
 		for frame in self.frameList:
 			frame.subtreeAlign(subtreeAlignFunc, self.srcTree, self.tgtTree)
 
-def loadData(srcTrList, tgtTrList, waList, alignFunc, ruleExFlag, wordRulesFlag, minMemFlag):
-	result = []
+def loadData(srcTrList, tgtTrList, waList, alignFunc, ruleExFlag, wordRulesFlag, minMemFlag, procID):
+	if minMemFlag:
+		if 'hacept' not in os.listdir('/dev/shm'):
+			os.mkdir('/dev/shm/hacept')
+		f1 = codecs.open('/dev/shm/hacept/rule.' + str(procID), 'w', 'utf-8')
+		f2 = codecs.open('/dev/shm/hacept/ruleInv.' + str(procID), 'w', 'utf-8')
+	else:
+		result = []
+
 	for i in xrange(len(waList)):
 		srcTr = nltk.ParentedTree(srcTrList[i])
 		tgtTr = nltk.ParentedTree(tgtTrList[i])
 		wa = [item.split('-') for item in waList[i].split()]
 		wa = [([int(i) for i in item[0].split(',')], [int(j) for j in item[1].split(',')]) for item in wa]
 
-		if len(srcTr.leaves()) == 0 or len(tgtTr.leaves()) == 0:
-			result.append(None)
+		if minMemFlag:
+			if len(srcTr.leaves()) == 0 or len(tgtTr.leaves()) == 0:
+				continue
+			else:
+				tmpSntFrame = SntFrame(srcTr, tgtTr, wa, alignFunc, ruleExFlag, wordRulesFlag)
+				for rule in tmpSntFrame.ruleList:
+					r, rinv = rule.mosesFormatRule()
+					f1.write(r)
+					f2.write(rinv)
 		else:
-			tmpSntFrame = SntFrame(srcTr, tgtTr, wa, alignFunc, ruleExFlag, wordRulesFlag)
-			if minMemFlag:
-				tmpSntFrame.srcTree, tmpSntFrame.srcWordList, tmpSntFrame.tgtTree, tmpSntFrame.tgtWordList = None, None, None, None
-				tmpSntFrame.waMatrix, tmpSntFrame.frameList = None, None
+			if len(srcTr.leaves()) == 0 or len(tgtTr.leaves()) == 0:
+				result.append(None)
+			else:
+				tmpSntFrame = SntFrame(srcTr, tgtTr, wa, alignFunc, ruleExFlag, wordRulesFlag)
+				result.append(tmpSntFrame)
 
-			result.append(tmpSntFrame)
-	
-	return result
+	if minMemFlag: return [None]
+	else: return result
 
 def loadDataParallelWrapper(srctrFilename, tgttrFilename, waFilename, numProc, alignFunc, ruleExFlag, wordRulesFlag, minMemFlag):
-	s = time.time()
+	s = time.clock()
 	#srcTreeList = [nltk.ParentedTree(re.sub(' \(\)', ' -lbr-)', re.sub(' \)\)', ' -rbr-)', line))) for line in codecs.open(srctrFilename, 'r', 'utf-8')]
 	srcTreeList = codecs.open(srctrFilename, 'r', 'utf-8').readlines()
 	print 'srcTreeList:', len(srcTreeList)
@@ -523,7 +537,7 @@ def loadDataParallelWrapper(srctrFilename, tgttrFilename, waFilename, numProc, a
 	#waList = [[(tuple([int(i) for i in item.split('-')[0].split(',')]), tuple([int(j) for j in item.split('-')[1].split(',')])) \
 	#		for item in line.split()] for line in open(waFilename, 'r').readlines()]
 	print 'waList:', len(waList)
-	print 'reading in all data time: ', time.time() - s, 's'
+	print 'reading in all data time: ', time.clock() - s
 
 	assert(len(srcTreeList) == len(tgtTreeList))
 	assert(len(srcTreeList) == len(waList))
@@ -535,13 +549,23 @@ def loadDataParallelWrapper(srctrFilename, tgttrFilename, waFilename, numProc, a
 		base = len(waList) / (numProc - 1)
 		for i in xrange(1, numProc + 1):
 			start = base * (i - 1)
-			end = base * i
-			tmp.append(pool.apply_async(loadData, args=(srcTreeList[start:end], tgtTreeList[start:end], waList[start:end], alignFunc, ruleExFlag, wordRulesFlag, minMemFlag)))
+			end = base * i if i < numProc else len(waList)
+			tmp.append(pool.apply_async(loadData, args=(srcTreeList[start:end], tgtTreeList[start:end], waList[start:end], alignFunc, ruleExFlag, wordRulesFlag, minMemFlag, i)))
 
 		for t in tmp:
 			sntList.extend(t.get())
 	else:
-		sntList = loadData(srcTreeList, tgtTreeList, waList, alignFunc, ruleExFlag, wordRulesFlag, minMemFlag)
+		sntList = loadData(srcTreeList, tgtTreeList, waList, alignFunc, ruleExFlag, wordRulesFlag, minMemFlag, 1)
+
+	if minMemFlag:
+		if 'rule.all' in os.listdir('/dev/shm/hacept/'):
+			os.remove('/dev/shm/hacept/rule.all')
+		if 'ruleInv.all' in os.listdir('/dev/shm/hacept/'):
+			os.remove('/dev/shm/hacept/ruleInv.all')
+		import subprocess
+		for i in xrange(1, numProc + 1):
+			subprocess.call("cat %s >> %s" % ('/dev/shm/hacept/rule.' + str(i), '/dev/shm/hacept/rule.all'), shell = True)
+			subprocess.call("cat %s >> %s" % ('/dev/shm/hacept/ruleInv.' + str(i), '/dev/shm/hacept/ruleInv.all'), shell = True)
 	return sntList 
 
 if __name__ == "__main__":
