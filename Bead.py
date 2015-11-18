@@ -267,7 +267,8 @@ class Bead:
 				for j in xrange(i, key[3]):
 					rhsTgt.append(j)
 
-			ruleList.append(Rule(lhs, rhsSrc, rhsTgt, align, self.wordAlignment, self.srcSnt, self.tgtSnt))
+			if self.legalRule(rhsSrc, rhsTgt):
+				ruleList.append(Rule(lhs, rhsSrc, rhsTgt, align, self.wordAlignment, self.srcSnt, self.tgtSnt))
 
 		# add in rules with no non-terminal Xs, i.e. rules that are phrase pairs
 		for key in self.subtreeAlignmentDic:
@@ -277,7 +278,8 @@ class Bead:
 				if square not in self.subtreeAlignmentDic:
 					rhsSrc = range(square[0], square[2])
 					rhsTgt = range(square[1], square[3])
-					ruleList.append(Rule(lhs, rhsSrc, rhsTgt, align, self.wordAlignment, self.srcSnt, self.tgtSnt))
+					if self.legalRule(rhsSrc, rhsTgt):
+						ruleList.append(Rule(lhs, rhsSrc, rhsTgt, align, self.wordAlignment, self.srcSnt, self.tgtSnt))
 
 		# if wordRulesFlag, add in rules that are word alignments (i.e. word pairs) but are not subtree alignments
 		if wordRulesFlag:
@@ -289,10 +291,37 @@ class Bead:
 						if sum(self.wordAlignment[i]) == 1 and sum([row[j] for row in self.wordAlignment]) == 1:
 							rhsSrc, rhsTgt = [i], [j]
 							tmpRule = Rule(lhs, rhsSrc, rhsTgt, align, self.wordAlignment, self.srcSnt, self.tgtSnt)
-							ruleList.append(tmpRule)
+							if self.legalRule(rhsSrc, rhsTgt):
+								ruleList.append(tmpRule)
 						break
 
 		return ruleList
+
+	def legalRule(self, rhsSrc, rhsTgt):
+		'''
+		If both rhsSrc and rhsTgt:
+			- contain at least 1 but at most 5 terminals, and
+			- contain at most 2 non-terminals
+			- don't contain any words longer than 10 characters
+		return True
+		otherwise, return False
+		'''
+		numXSrc = rhsSrc.count('X')
+		numXTgt = rhsTgt.count('X')
+		if numXSrc > 2 or numXTgt> 2:
+			return False
+		if len(rhsSrc) - numXSrc > 5 or len(rhsSrc) - numXSrc < 1 or \
+				len(rhsTgt) - numXTgt > 5 or len(rhsTgt) - numXTgt < 1:
+					return False
+		for i in rhsSrc:
+			if i != 'X' and len(self.srcSnt[i]) > 10:
+				return False
+
+		for i in rhsTgt:
+			if i != 'X' and len(self.tgtSnt[i]) > 10:
+				return False
+
+		return True
 
 
 if __name__ == "__main__":
