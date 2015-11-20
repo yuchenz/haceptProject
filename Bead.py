@@ -308,7 +308,7 @@ class Bead:
 		'''
 		numXSrc = rhsSrc.count('X')
 		numXTgt = rhsTgt.count('X')
-		if numXSrc > 2 or numXTgt> 2:
+		if numXSrc > 2 or numXTgt > 2:
 			return False
 		if len(rhsSrc) - numXSrc > 5 or len(rhsSrc) - numXSrc < 1 or \
 				len(rhsTgt) - numXTgt > 5 or len(rhsTgt) - numXTgt < 1:
@@ -316,9 +316,13 @@ class Bead:
 		for i in rhsSrc:
 			if i != 'X' and len(self.srcSnt[i]) > 10:
 				return False
+			elif i != 'X' and '|' in self.srcSnt[i]:
+				return False
 
 		for i in rhsTgt:
 			if i != 'X' and len(self.tgtSnt[i]) > 10:
+				return False
+			elif i != 'X' and '|' in self.tgtSnt[i]:
 				return False
 
 		return True

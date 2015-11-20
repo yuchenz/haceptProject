@@ -96,10 +96,10 @@ def main():
 		s = time.clock()
 		ans, ans1 = [], []
 		if args.minMemFlag:
-			for rule in codecs.open('/dev/shm/hacept/rule.all', 'r', 'utf-8'):
-				ans.append(rule)
-			for rule in codecs.open('/dev/shm/hacept/ruleInv.all', 'r', 'utf-8'):
-				ans1.append(rule)
+			for rule in codecs.open('/dev/shm/hacept/rule.all', 'r', 'utf-8').read().split('\n')[:-1]:
+				ans.append(rule + '\n')
+			for rule in codecs.open('/dev/shm/hacept/ruleInv.all', 'r', 'utf-8').read().split('\n')[:-1]:
+				ans1.append(rule + '\n')
 		else:
 			for sntFrame in alignedSntFrameList:
 				#pdb.set_trace()
