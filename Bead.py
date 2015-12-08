@@ -290,8 +290,8 @@ class Bead:
 					if self.wordAlignment[i][j]:
 						if sum(self.wordAlignment[i]) == 1 and sum([row[j] for row in self.wordAlignment]) == 1:
 							rhsSrc, rhsTgt = [i], [j]
-							tmpRule = Rule(lhs, rhsSrc, rhsTgt, align, self.wordAlignment, self.srcSnt, self.tgtSnt)
 							if self.legalRule(rhsSrc, rhsTgt):
+								tmpRule = Rule(lhs, rhsSrc, rhsTgt, align, self.wordAlignment, self.srcSnt, self.tgtSnt)
 								ruleList.append(tmpRule)
 						break
 
