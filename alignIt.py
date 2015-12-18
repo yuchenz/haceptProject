@@ -8,6 +8,7 @@ from sntAlign import sntAlign
 from evalSubtreeAlignment import evaluate
 from Bead import Bead
 import time
+import re
 
 debug_log = sys.stderr
 out = sys.stdout
@@ -28,6 +29,8 @@ def main():
 
 	arg_parser.add_argument('--align_func', help='subtree alignment function', default='bottom')
 	arg_parser.add_argument('--num_proc', type=int, help='number of parallel processes', default=24)
+
+	arg_parser.add_argument('--verbose', action='store_true', help='output verbose debugging info', default=False)
 
 	arg_parser.add_argument('--soft_eval', action='store_true', help='evaluation: if any frame contains a gold subtree alignment, \
 			count it as one correct alignment point', default=False)
@@ -73,7 +76,7 @@ def main():
 	s = time.clock()
 	sntFrameList = align(os.path.join(args.temp_dir, compiled_data + lan1_suffix + bps_suffix), 
 			os.path.join(args.temp_dir, compiled_data + lan2_suffix + bps_suffix),
-			os.path.join(args.temp_dir, wa_file), args.align_func, args.num_proc, args.ex, args.wordRulesFlag, args.minMemFlag)
+			os.path.join(args.temp_dir, wa_file), args.align_func, args.num_proc, args.ex, args.wordRulesFlag, args.minMemFlag, args.verbose)
 	print >> out, 'sntFrameList size: ', len(sntFrameList)
 	print >> out, 'subtree alignment time: ', time.clock() - s
 
@@ -110,6 +113,16 @@ def main():
 					ruleNInv, ruleInv = rule.mosesFormatRule()
 					ans.append(ruleNInv)
 					ans1.append(ruleInv)
+
+		# change '-lbr-' into '(', '-rbr-' into ')', and '-at-' into '@'
+		for i, a in enumerate(ans):
+			a = re.sub('-lbr-', '(', a)
+			a = re.sub('-rbr-', ')', a)
+			ans[i] = re.sub('-at-', '@', a)
+		for i, a in enumerate(ans1):
+			a = re.sub('-lbr-', '(', a)
+			a = re.sub('-rbr-', ')', a)
+			ans1[i] = re.sub('-at-', '@', a)
 
 		ans.sort(); ans1.sort()
 		print >> out, 'sorting rules / inversed rules time: ', time.clock() - s

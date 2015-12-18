@@ -3,9 +3,12 @@
 import nltk
 from Rule import Rule
 import util
+import sys
+
+debug_log = sys.stderr
 
 class Bead:
-	def __init__(self, srcTree, tgtTree, wordAlignment, subtreeAlignment, wordRulesFlag=False):
+	def __init__(self, srcTree, tgtTree, wordAlignment, subtreeAlignment, wordRulesFlag, verbose):
 		"""
 		Initialize a Bead instance.
 		
@@ -32,6 +35,8 @@ class Bead:
 									the key tuple is one level upper then its list of tuples
 
 		"""
+		self.verbose = verbose
+
 		self.srcTree = srcTree
 		self.srcSnt = [word.lower() for word in srcTree.leaves()]
 		self.tgtTree = tgtTree
@@ -282,7 +287,10 @@ class Bead:
 						ruleList.append(Rule(lhs, rhsSrc, rhsTgt, align, self.wordAlignment, self.srcSnt, self.tgtSnt))
 
 		# if wordRulesFlag, add in rules that are word alignments (i.e. word pairs) but are not subtree alignments
+		if self.verbose:
+			print >> debug_log, "Bead got wordRulesFlag:", str(wordRulesFlag)
 		if wordRulesFlag:
+			if self.verbose: print >> debug_log, "wordRules are:"
 			lhs = 'X'
 			rhsSrc, rhsTgt, align = [], [], []   # here align is for the alignment of Xs, not word alignment, so keep empty 
 			for i in xrange(len(self.wordAlignment)):
@@ -290,7 +298,9 @@ class Bead:
 					if self.wordAlignment[i][j]:
 						if sum(self.wordAlignment[i]) == 1 and sum([row[j] for row in self.wordAlignment]) == 1:
 							rhsSrc, rhsTgt = [i], [j]
+							if self.verbose: print >> debug_log, i, j, self.srcSnt[i], self.tgtSnt[j]
 							if self.legalRule(rhsSrc, rhsTgt):
+								if self.verbose: print >> debug_log, "legal"
 								tmpRule = Rule(lhs, rhsSrc, rhsTgt, align, self.wordAlignment, self.srcSnt, self.tgtSnt)
 								ruleList.append(tmpRule)
 						break
@@ -309,20 +319,26 @@ class Bead:
 		numXSrc = rhsSrc.count('X')
 		numXTgt = rhsTgt.count('X')
 		if numXSrc > 2 or numXTgt > 2:
+			if self.verbose: print >> debug_log, "more than 2 Xs"
 			return False
 		if len(rhsSrc) - numXSrc > 5 or len(rhsSrc) - numXSrc < 1 or \
 				len(rhsTgt) - numXTgt > 5 or len(rhsTgt) - numXTgt < 1:
+					if self.verbose: print >> debug_log, "more than 5 terminals"
 					return False
 		for i in rhsSrc:
-			if i != 'X' and len(self.srcSnt[i]) > 10:
+			if i != 'X' and len(self.srcSnt[i]) > 40:
+				if self.verbose: print >> debug_log, "src word longer than 40 characters"
 				return False
 			elif i != 'X' and '|' in self.srcSnt[i]:
+				if self.verbose: print >> debug_log, "src side contains '|'"
 				return False
 
 		for i in rhsTgt:
-			if i != 'X' and len(self.tgtSnt[i]) > 10:
+			if i != 'X' and len(self.tgtSnt[i]) > 40:
+				if self.verbose: print >> debug_log, "tgt word longer than 40 characters"
 				return False
 			elif i != 'X' and '|' in self.tgtSnt[i]:
+				if self.verbose: print >> debug_log, "tgt side contains '|'"
 				return False
 
 		return True

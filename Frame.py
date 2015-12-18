@@ -139,7 +139,10 @@ class Frame:
 			par = tr[pos]
 			while par != tr:
 				for i in xrange(par.parent_index()):
-					cnt += len(par.parent()[i].leaves())
+					if isinstance(par.parent()[i], nltk.ParentedTree):
+						cnt += len(par.parent()[i].leaves())
+					else:
+						print >> debug_log, tr
 				par = par.parent()
 			offsetList.append((cnt, cnt+len(tr[pos].leaves())))
 			cnt = 0
@@ -191,7 +194,7 @@ class Frame:
 		return ans
 
 class SntFrame:
-	def __init__(self, srcTree, tgtTree, wordAlignment, alignFunc, ruleExFlag, wordRulesFlag): 
+	def __init__(self, srcTree, tgtTree, wordAlignment, alignFunc, ruleExFlag, wordRulesFlag, verbose): 
 		"""
 		Initialize a FrameList instance.
 
@@ -218,8 +221,18 @@ class SntFrame:
 		self.ruleList = None
 		if ruleExFlag:
 			tmpSuba = [frame.subtreeAlignment_waMatrixPos for frame in self.frameList]
-			tmpBead = Bead(self.srcTree, self.tgtTree, self.waMatrix, tmpSuba, wordRulesFlag)
+			tmpBead = Bead(self.srcTree, self.tgtTree, self.waMatrix, tmpSuba, wordRulesFlag, verbose)
 			self.ruleList = tmpBead.ruleList
+
+		if verbose:
+			print >> debug_log
+			print >> debug_log, "SntFrame got the word alignment matrix:"
+			print >> debug_log, '\n'.join([' '.join([str(d) for d in row]) for row in self.waMatrix])
+			print >> debug_log
+			print >> debug_log, "SntFrame got the following rules:"
+			for rule in self.ruleList:
+				print >> debug_log, ' '.join(rule.rhsSrc).encode('utf-8'), '|||', ' '.join(rule.rhsTgt)
+			print >> debug_log
 
 	"""
 	# old version return a list
@@ -491,7 +504,7 @@ class SntFrame:
 		for frame in self.frameList:
 			frame.subtreeAlign(subtreeAlignFunc, self.srcTree, self.tgtTree)
 
-def loadData(srcTrList, tgtTrList, waList, alignFunc, ruleExFlag, wordRulesFlag, minMemFlag, procID):
+def loadData(srcTrList, tgtTrList, waList, alignFunc, ruleExFlag, wordRulesFlag, minMemFlag, procID, verbose):
 	if minMemFlag:
 		if 'hacept' not in os.listdir('/dev/shm'):
 			os.mkdir('/dev/shm/hacept')
@@ -510,7 +523,7 @@ def loadData(srcTrList, tgtTrList, waList, alignFunc, ruleExFlag, wordRulesFlag,
 			if len(srcTr.leaves()) == 0 or len(tgtTr.leaves()) == 0:
 				continue
 			else:
-				tmpSntFrame = SntFrame(srcTr, tgtTr, wa, alignFunc, ruleExFlag, wordRulesFlag)
+				tmpSntFrame = SntFrame(srcTr, tgtTr, wa, alignFunc, ruleExFlag, wordRulesFlag, verbose)
 				for rule in tmpSntFrame.ruleList:
 					r, rinv = rule.mosesFormatRule()
 					f1.write(r)
@@ -519,13 +532,13 @@ def loadData(srcTrList, tgtTrList, waList, alignFunc, ruleExFlag, wordRulesFlag,
 			if len(srcTr.leaves()) == 0 or len(tgtTr.leaves()) == 0:
 				result.append(None)
 			else:
-				tmpSntFrame = SntFrame(srcTr, tgtTr, wa, alignFunc, ruleExFlag, wordRulesFlag)
+				tmpSntFrame = SntFrame(srcTr, tgtTr, wa, alignFunc, ruleExFlag, wordRulesFlag, verbose)
 				result.append(tmpSntFrame)
 
 	if minMemFlag: return [None]
 	else: return result
 
-def loadDataParallelWrapper(srctrFilename, tgttrFilename, waFilename, numProc, alignFunc, ruleExFlag, wordRulesFlag, minMemFlag):
+def loadDataParallelWrapper(srctrFilename, tgttrFilename, waFilename, numProc, alignFunc, ruleExFlag, wordRulesFlag, minMemFlag, verbose):
 	s = time.clock()
 	#srcTreeList = [nltk.ParentedTree(re.sub(' \(\)', ' -lbr-)', re.sub(' \)\)', ' -rbr-)', line))) for line in codecs.open(srctrFilename, 'r', 'utf-8')]
 	srcTreeList = codecs.open(srctrFilename, 'r', 'utf-8').readlines()
@@ -550,12 +563,12 @@ def loadDataParallelWrapper(srctrFilename, tgttrFilename, waFilename, numProc, a
 		for i in xrange(1, numProc + 1):
 			start = base * (i - 1)
 			end = base * i if i < numProc else len(waList)
-			tmp.append(pool.apply_async(loadData, args=(srcTreeList[start:end], tgtTreeList[start:end], waList[start:end], alignFunc, ruleExFlag, wordRulesFlag, minMemFlag, i)))
+			tmp.append(pool.apply_async(loadData, args=(srcTreeList[start:end], tgtTreeList[start:end], waList[start:end], alignFunc, ruleExFlag, wordRulesFlag, minMemFlag, i, verbose)))
 
 		for t in tmp:
 			sntList.extend(t.get())
 	else:
-		sntList = loadData(srcTreeList, tgtTreeList, waList, alignFunc, ruleExFlag, wordRulesFlag, minMemFlag, 1)
+		sntList = loadData(srcTreeList, tgtTreeList, waList, alignFunc, ruleExFlag, wordRulesFlag, minMemFlag, 1, verbose)
 
 	if minMemFlag:
 		if 'rule.all' in os.listdir('/dev/shm/hacept/'):
