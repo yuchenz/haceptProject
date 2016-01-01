@@ -8,7 +8,7 @@ import sys
 debug_log = sys.stderr
 
 class Bead:
-	def __init__(self, srcTree, tgtTree, wordAlignment, subtreeAlignment, wordRulesFlag, verbose):
+	def __init__(self, srcTree, tgtTree, wordAlignment, subtreeAlignment, wordRulesFlag, extensiveRulesFlag,  verbose):
 		"""
 		Initialize a Bead instance.
 		
@@ -48,7 +48,7 @@ class Bead:
 		self.subtreeAlignment = list(set(self.subtreeAlignment))
 		
 		self.subtreeAlignmentDic = self._level_(self.subtreeAlignment)
-		self.ruleList = self._extractRules_(wordRulesFlag)
+		self.ruleList = self._extractRules_(wordRulesFlag, extensiveRulesFlag)
 
 	@classmethod
 	def loadData(cls, filename):
@@ -234,7 +234,7 @@ class Bead:
 		else:
 			return False
 
-	def _extractRules_(self, wordRulesFlag):
+	def _extractRules_(self, wordRulesFlag, extensiveRulesFlag):
 		"""
 		Return a list of rules extracted from this bead.
 
@@ -304,6 +304,22 @@ class Bead:
 								tmpRule = Rule(lhs, rhsSrc, rhsTgt, align, self.wordAlignment, self.srcSnt, self.tgtSnt)
 								ruleList.append(tmpRule)
 						break
+
+		# if extensiveRulesFlag, add in extensive rules which include:
+		#	- a rule with the determiner ("a" or "the") removed, e.g. given an existing rule "... ||| a peace agreement [X] ||| ...", 
+		#			another rule "... ||| peace agreement [X] ||| ..." is added, iff. "a" is not aligned to any foreign words,
+		#			word/X alignments and occurences are kept the same;
+		if extensiveRulesFlag:
+			tmpRuleList = []
+			for rule in ruleList:
+				if len(rule.rhsTgt) > 1 and rule.rhsTgt[0] in ["a", "the"] \
+						and '0' not in [align[1] for align in rule.alignment]:
+					tmpRule = Rule(None, None, None, None, None, None, None)
+					tmpRule.lhs, tmpRule.rhsSrc, tmpRule.rhsTgt = rule.lhs, rule.rhsSrc, rule.rhsTgt[1:]
+					tmpRule.alignment = [(align[0], align[1] - 1) for align in rule.alignment]
+					#print tmpRule.alignment
+					tmpRuleList.append(tmpRule)
+			ruleList.extend(tmpRuleList)
 
 		return ruleList
 

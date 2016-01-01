@@ -31,11 +31,14 @@ class Rule:
 		:param tgtSnt: the list of words of target snt 
 
 		"""
-		self.lhs = lhs
-		self.rhsSrc = [srcSnt[i] if i != 'X' else 'X' for i in rhsSrc] 
-		self.rhsTgt = [tgtSnt[i] if i != 'X' else 'X' for i in rhsTgt] 
-		#print self.rhsSrc, self.rhsTgt, alignment
-		self.alignment = self.setupAlignment(alignment, wordAlignment, rhsSrc, rhsTgt)
+		if lhs == None:
+			self.lhs, self.rhsSrc, self.rhsTgt, self.alignment = None, None, None, None
+		else:
+			self.lhs = lhs
+			self.rhsSrc = [srcSnt[i] if i != 'X' else 'X' for i in rhsSrc] 
+			self.rhsTgt = [tgtSnt[i] if i != 'X' else 'X' for i in rhsTgt] 
+			#print self.rhsSrc, self.rhsTgt, alignment
+			self.alignment = self.setupAlignment(alignment, wordAlignment, rhsSrc, rhsTgt)
 
 	def setupAlignment(self, alignment, wordAlignment, rhsSrc, rhsTgt):
 		#pdb.set_trace()

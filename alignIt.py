@@ -38,6 +38,8 @@ def main():
 	arg_parser.add_argument('--ex', action='store_true', help='turn on rule extraction', default=False)
 	arg_parser.add_argument('--wordRulesFlag', action='store_true', help='turn on word level rule extraction, \
 			i.e. add word alignments that are not in subtree alignments to the rule table', default=False)
+	arg_parser.add_argument('--extensiveRulesFlag', action='store_true', help='turn on extensive rule extraction, \
+			i.e. add rules whose determiners are removed to the rule table', default=False)
 	arg_parser.add_argument('--evalFlag', action='store_true', help='turn on subtree alignment evaluation', default=False)
 	arg_parser.add_argument('--minMemFlag', action='store_true', help='turn on minimizing memory use \
 			(in this mode, only rule extraction can be done, no subtree alignment evaluation)', default=False)
@@ -76,7 +78,8 @@ def main():
 	s = time.clock()
 	sntFrameList = align(os.path.join(args.temp_dir, compiled_data + lan1_suffix + bps_suffix), 
 			os.path.join(args.temp_dir, compiled_data + lan2_suffix + bps_suffix),
-			os.path.join(args.temp_dir, wa_file), args.align_func, args.num_proc, args.ex, args.wordRulesFlag, args.minMemFlag, args.verbose)
+			os.path.join(args.temp_dir, wa_file), args.align_func, args.num_proc, args.ex, args.wordRulesFlag, 
+			args.minMemFlag, args.verbose, args.extensiveRulesFlag)
 	print >> out, 'sntFrameList size: ', len(sntFrameList)
 	print >> out, 'subtree alignment time: ', time.clock() - s
 

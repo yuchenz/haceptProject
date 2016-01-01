@@ -43,8 +43,8 @@ def bottomAlign(frame, srcTr, tgtTr):
 
 alignFuncMap = {'top' : topAlign, 'bottom' : bottomAlign}
 
-def align(srcTreeFilename, tgtTreeFilename, waFilename, alignFunc, numProc, ruleExFlag, wordRulesFlag, minMemFlag, verbose):
-	sntFrameList = loadDataParallelWrapper(srcTreeFilename, tgtTreeFilename, waFilename, numProc, alignFuncMap[alignFunc], ruleExFlag, wordRulesFlag, minMemFlag, verbose)
+def align(srcTreeFilename, tgtTreeFilename, waFilename, alignFunc, numProc, ruleExFlag, wordRulesFlag, minMemFlag, verbose, extensiveRulesFlag):
+	sntFrameList = loadDataParallelWrapper(srcTreeFilename, tgtTreeFilename, waFilename, numProc, alignFuncMap[alignFunc], ruleExFlag, wordRulesFlag, minMemFlag, verbose, extensiveRulesFlag)
 	return sntFrameList
 
 if __name__ == '__main__':
