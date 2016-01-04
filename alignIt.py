@@ -3,6 +3,7 @@
 import argparse
 import os, sys, pdb
 import codecs
+import nltk
 from subtreeAlign import align, topAlign
 from sntAlign import sntAlign
 from evalSubtreeAlignment import evaluate
@@ -43,6 +44,8 @@ def main():
 	arg_parser.add_argument('--evalFlag', action='store_true', help='turn on subtree alignment evaluation', default=False)
 	arg_parser.add_argument('--minMemFlag', action='store_true', help='turn on minimizing memory use \
 			(in this mode, only rule extraction can be done, no subtree alignment evaluation)', default=False)
+
+	arg_parser.add_argument('--lexTrans', action='store_true', help='turn on building lexical translation tables', default=False)
 
 	args = arg_parser.parse_args()
 
@@ -138,6 +141,44 @@ def main():
 		for a in ans1: outf1.write(a)
 		outf.close(); outf1.close()
 		print >> out, 'output all rules time: ', time.clock() - s
+	
+	# if build lexical translation tables
+	# warning: super slow
+	# to do: change this part into a function with multiprocessing
+	if args.lexTrans:
+		print >> out, "building lexical translation tables ..."
+
+		fList = codecs.open(os.path.join(args.temp_dir, compiled_data + lan1_suffix), 'r', 'utf-8').read().split('\n')[:-1]
+		print >> out, "fList", len(fList)
+		eList = codecs.open(os.path.join(args.temp_dir, compiled_data + lan2_suffix), 'r', 'utf-8').read().split('\n')[:-1]
+		print >> out, "eList", len(eList)
+		waList = open(os.path.join(args.temp_dir, wa_file)).readlines()
+		print >> out, "waList", len(waList)
+
+		assert len(fList) == len(eList), "fFile and eFile don't have same number of sents: %d, %d" % (len(fList), len(eList))
+		assert len(fList) == len(waList), "waFile doesn't have same number of sents as the other two files: %d, %d" % (len(waList), len(fList))
+
+		fList = [sent.split() for sent in fList]
+		print >> out, "reading fList done"
+		eList = [sent.split() for sent in eList]
+		print >> out, "reading eList done"
+		waList = [[(int(item.split('-')[0]), int(item.split('-')[1])) for item in sent.split()] for sent in waList]
+		print >> out, "reading waList done"
+
+		fDict = nltk.FreqDist([word for sent in fList for word in sent])
+		print >> out, "building fDict done"
+		eDict = nltk.FreqDist([word for sent in eList for word in sent])
+		print >> out, "building eDict done"
+		feDict = nltk.FreqDist([(fList[i][a[0]], eList[i][a[1]]) for i in xrange(len(waList)) for a in waList[i]])
+		print >> out, "building feDict done"
+
+		f2eFile = codecs.open(os.path.join('/dev/shm/', args.stem+'.lex.f2e'), 'w', 'utf-8')
+		e2fFile = codecs.open(os.path.join('/dev/shm/', args.stem+'.lex.e2f'), 'w', 'utf-8')
+		print >> out, "output lexical translations ..."
+		for key in feDict:
+			f2eFile.write(key[1] + ' ' + key[0] + ' ' + str(float(feDict[key]) / float(fDict[key[0]])) + '\n')
+			e2fFile.write(key[0] + ' ' + key[1] + ' ' + str(float(feDict[key]) / float(eDict[key[1]])) + '\n')
+		f2eFile.close(); e2fFile.close()
 
 	# if output for analysis
 	if args.analysis:
