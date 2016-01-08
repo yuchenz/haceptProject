@@ -350,6 +350,7 @@ class SntFrame:
 		values are the corresponding subtree treeposition.
 
 		Here we only keep subtree spans, but not leaf spans, i.e. one layer subtrees like (NNP China) are ignored.
+		[experiment] include one layer subtrees like (NNP China) as subtrees
 
 		:type tree: nltk.ParentedTree
 		:param tree: a constituent phrase-based tree structure
@@ -359,8 +360,11 @@ class SntFrame:
 		snt = tree.leaves()
 		#pdb.set_trace()
 		for subtree in tree.subtrees():
+			'''
+			[experiment] include one layer subtrees like (NNP China) as subtrees
 			if subtree.height() <= 2:
 				continue
+			'''
 			span = Frame.treeposition2offsetPosition([subtree.treeposition()], tree)[0] 
 			spanDict[(span[0], span[-1])] = subtree.treeposition()
 		return spanDict

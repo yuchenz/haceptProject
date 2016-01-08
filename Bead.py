@@ -4,6 +4,7 @@ import nltk
 from Rule import Rule
 import util
 import sys
+import pdb
 
 debug_log = sys.stderr
 
@@ -47,6 +48,7 @@ class Bead:
 		self.subtreeAlignment.extend(util.waMatrix2unarySubtreeAlignments(self.wordAlignment, self.srcTree, self.tgtTree))
 		self.subtreeAlignment = list(set(self.subtreeAlignment))
 		
+		#pdb.set_trace()
 		self.subtreeAlignmentDic = self._level_(self.subtreeAlignment)
 		self.ruleList = self._extractRules_(wordRulesFlag, extensiveRulesFlag)
 
@@ -272,18 +274,26 @@ class Bead:
 				for j in xrange(i, key[3]):
 					rhsTgt.append(j)
 
+			tmp = Rule(lhs, rhsSrc, rhsTgt, align, self.wordAlignment, self.srcSnt, self.tgtSnt)  
+			#print tmp
 			if self.legalRule(rhsSrc, rhsTgt):
+				#print 'legal'
 				ruleList.append(Rule(lhs, rhsSrc, rhsTgt, align, self.wordAlignment, self.srcSnt, self.tgtSnt))
 
-		# add in rules with no non-terminal Xs, i.e. rules that are phrase pairs
+		# add in rules with no non-terminal Xs, i.e. rules that are phrase pairs (only phrase pairs that satisfy the tree structures)
+		#pdb.set_trace()
 		for key in self.subtreeAlignmentDic:
 			lhs = 'X'
 			rhsSrc, rhsTgt, align = [], [], []   # here align is for the alignment of Xs, not word alignment, so keep empty 
 			for square in self.subtreeAlignmentDic[key]:
-				if square not in self.subtreeAlignmentDic:
+				if 1:  ### [experiment] include phrase pairs that are higher level 
+				#if square not in self.subtreeAlignmentDic:
 					rhsSrc = range(square[0], square[2])
 					rhsTgt = range(square[1], square[3])
+					tmp = Rule(lhs, rhsSrc, rhsTgt, align, self.wordAlignment, self.srcSnt, self.tgtSnt)
+					#print tmp
 					if self.legalRule(rhsSrc, rhsTgt):
+						#print "legal"
 						ruleList.append(Rule(lhs, rhsSrc, rhsTgt, align, self.wordAlignment, self.srcSnt, self.tgtSnt))
 
 		# if wordRulesFlag, add in rules that are word alignments (i.e. word pairs) but are not subtree alignments

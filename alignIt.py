@@ -28,7 +28,7 @@ def main():
 	arg_parser.add_argument('--psuffix', help='parse file suffix', default='bps')
 	arg_parser.add_argument('--ssuffix', help='subtree alignment file suffix', default='suba')
 
-	arg_parser.add_argument('--align_func', help='subtree alignment function', default='bottom')
+	arg_parser.add_argument('--align_func', help='subtree alignment function -- top, bottom(default), all', default='bottom')
 	arg_parser.add_argument('--num_proc', type=int, help='number of parallel processes', default=24)
 
 	arg_parser.add_argument('--verbose', action='store_true', help='output verbose debugging info', default=False)
