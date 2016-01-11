@@ -20,7 +20,7 @@ def topAlign(frame, srcTr, tgtTr):
 	:rvalue: (src subtree treeposition, tgt subtree treeposition) 
 
 	"""
-	return (sorted(frame.srcList)[0], sorted(frame.tgtList)[0])
+	return [(sorted(frame.srcList)[0], sorted(frame.tgtList)[0])]
 
 def bottomAlign(frame, srcTr, tgtTr):
 	"""
@@ -39,9 +39,16 @@ def bottomAlign(frame, srcTr, tgtTr):
 	:rvalue: (src subtree treeposition, tgt subtree treeposition) 
 
 	"""
-	return (sorted(frame.srcList)[-1], sorted(frame.tgtList)[-1])
+	return [(sorted(frame.srcList)[-1], sorted(frame.tgtList)[-1])]
 
-alignFuncMap = {'top' : topAlign, 'bottom' : bottomAlign}
+def allAlign(frame, srcTr, tgtTr):
+	result = []
+	for sf in frame.srcList:
+		for tf in frame.tgtList:
+			result.append((sf, tf))
+	return result
+
+alignFuncMap = {'top' : topAlign, 'bottom' : bottomAlign, 'all' : allAlign}
 
 def align(srcTreeFilename, tgtTreeFilename, waFilename, alignFunc, numProc, ruleExFlag, wordRulesFlag, minMemFlag, verbose, extensiveRulesFlag):
 	sntFrameList = loadDataParallelWrapper(srcTreeFilename, tgtTreeFilename, waFilename, numProc, alignFuncMap[alignFunc], ruleExFlag, wordRulesFlag, minMemFlag, verbose, extensiveRulesFlag)

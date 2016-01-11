@@ -28,7 +28,7 @@ def main():
 	arg_parser.add_argument('--psuffix', help='parse file suffix', default='bps')
 	arg_parser.add_argument('--ssuffix', help='subtree alignment file suffix', default='suba')
 
-	arg_parser.add_argument('--align_func', help='subtree alignment function -- top, bottom(default), all', default='bottom')
+	arg_parser.add_argument('--align_func', help='subtree alignment function -- top, bottom(default), all(slow)', default='bottom')
 	arg_parser.add_argument('--num_proc', type=int, help='number of parallel processes', default=24)
 
 	arg_parser.add_argument('--verbose', action='store_true', help='output verbose debugging info', default=False)
@@ -116,7 +116,8 @@ def main():
 					continue
 				# put extracted rules into rule files
 				for rule in sntFrame.ruleList:
-					ruleNInv, ruleInv = rule.mosesFormatRule()
+					ruleNInv, ruleInv = rule[0], rule[1] 
+					#ruleNInv, ruleInv = rule.mosesFormatRule()
 					ans.append(ruleNInv)
 					ans1.append(ruleInv)
 
@@ -146,7 +147,7 @@ def main():
 	# warning: super slow
 	# to do: change this part into a function with multiprocessing
 	if args.lexTrans:
-		print >> out, "building lexical translation tables ..."
+		print >> out, "building lexical translation tables ... [warning: super slow]"
 
 		fList = codecs.open(os.path.join(args.temp_dir, compiled_data + lan1_suffix), 'r', 'utf-8').read().split('\n')[:-1]
 		print >> out, "fList", len(fList)

@@ -183,8 +183,8 @@ class Frame:
 
 		"""
 		self.subtreeAlignment_treepos = subtreeAlignFunc(self, srcTr, tgtTr)
-		self.subtreeAlignment_waMatrixPos = self.treeposition2waMatrixPosition(self.subtreeAlignment_treepos[0], \
-				self.subtreeAlignment_treepos[1], srcTr, tgtTr) 
+		self.subtreeAlignment_waMatrixPos = [self.treeposition2waMatrixPosition(suba[0], suba[1], srcTr, tgtTr) \
+				for suba in self.subtreeAlignment_treepos] 
 
 	def allPossibleSubtreeAlignment(self):
 		ans = []
@@ -214,26 +214,48 @@ class SntFrame:
 		self.tgtWordList = [word.lower() for word in tgtTree.leaves()]
 		self.waMatrix = self._makeWaMatrix_(wordAlignment, len(srcTree.leaves()), len(tgtTree.leaves()))
 
-		#pdb.set_trace()
-		self.frameList = self._extractFrames_()
+		self.frameList = self._extractFrames_(wordRulesFlag)
 		self.subtreeAlign(alignFunc)
-
-		self.ruleList = None
-		if ruleExFlag:
-			tmpSuba = [frame.subtreeAlignment_waMatrixPos for frame in self.frameList]
-			tmpBead = Bead(self.srcTree, self.tgtTree, self.waMatrix, tmpSuba, wordRulesFlag, extensiveRulesFlag, verbose)
-			self.ruleList = tmpBead.ruleList
 
 		if verbose:
 			print >> debug_log
-			print >> debug_log, "SntFrame got the word alignment matrix:"
-			print >> debug_log, '\n'.join([' '.join([str(d) for d in row]) for row in self.waMatrix])
-			print >> debug_log
-			print >> debug_log, "SntFrame got the following rules:"
-			for rule in self.ruleList:
-				print >> debug_log, ' '.join(rule.rhsSrc).encode('utf-8'), '|||', ' '.join(rule.rhsTgt)
+			#print >> debug_log, "SntFrame got the word alignment matrix:"
+			#print >> debug_log, '\n'.join([' '.join([str(d) for d in row]) for row in self.waMatrix])
+			#print >> debug_log
+			print >> debug_log, "SntFrame's frameList:  (" + str(len(self.frameList)) + " lists)" 
+			for frame in self.frameList:
+				print frame.subtreeAlignment_waMatrixPos
 			print >> debug_log
 
+		self.ruleList = []
+		if ruleExFlag:
+			tmpSubaList = [frame.subtreeAlignment_waMatrixPos for frame in self.frameList]
+
+			if verbose:
+				print >> debug_log
+				print >> debug_log, "SntFrame's all suba given align_func", alignFunc.__name__, ": (this one should be the same with the above frameList)"
+				print >> debug_log, tmpSubaList
+				print >> debug_log
+
+			if verbose:
+				print >> debug_log, "rules in the Bead:"
+
+			tmpBead = Bead(self.srcTree, self.tgtTree, self.waMatrix, tmpSubaList, extensiveRulesFlag, verbose)
+
+			if verbose:
+				print >> debug_log
+				print >> debug_log, "corresponding bead info: (this one should be a sorted version of the above frameList, sorted by the area of each square, biggest to smallest)"
+				print >> debug_log, tmpBead
+				print >> debug_log
+
+			self.ruleList = [rule.mosesFormatRule() for rule in tmpBead.ruleList]
+
+		if verbose:
+			print >> debug_log, "SntFrame got the following rules:"
+			for rule in self.ruleList:
+				print >> debug_log, ' '.join(rule[0]).encode('utf-8'),
+			print >> debug_log
+	
 	"""
 	# old version return a list
 	@classmethod
@@ -309,7 +331,7 @@ class SntFrame:
 					waMatrix[i][j] = 1
 		return waMatrix
 
-	def _extractFrames_(self):
+	def _extractFrames_(self, wordRulesFlag):
 		"""
 		Return a list of Frame instances.
 
@@ -317,8 +339,8 @@ class SntFrame:
 
 		"""
 		#pdb.set_trace()
-		srcSubtreeSpanDict = self._extractSubtreeSpan_(self.srcTree)
-		tgtSubtreeSpanDict = self._extractSubtreeSpan_(self.tgtTree)
+		srcSubtreeSpanDict = self._extractSubtreeSpan_(self.srcTree, wordRulesFlag)
+		tgtSubtreeSpanDict = self._extractSubtreeSpan_(self.tgtTree, wordRulesFlag)
 
 		frameSet = set() 
 		for span in srcSubtreeSpanDict:
@@ -344,7 +366,7 @@ class SntFrame:
 		frameList = self._mergeFrames_(frameSet)
 		return frameList
 
-	def _extractSubtreeSpan_(self, tree):
+	def _extractSubtreeSpan_(self, tree, wordRulesFlag):
 		"""
 		Return a dictionary, keys are 2-tuples, each tuple (i, j) represents a subtree span covering from word i to word j-1,
 		values are the corresponding subtree treeposition.
@@ -360,11 +382,8 @@ class SntFrame:
 		snt = tree.leaves()
 		#pdb.set_trace()
 		for subtree in tree.subtrees():
-			'''
-			[experiment] include one layer subtrees like (NNP China) as subtrees
-			if subtree.height() <= 2:
+			if not wordRulesFlag and subtree.height() <= 2:
 				continue
-			'''
 			span = Frame.treeposition2offsetPosition([subtree.treeposition()], tree)[0] 
 			spanDict[(span[0], span[-1])] = subtree.treeposition()
 		return spanDict
@@ -529,7 +548,8 @@ def loadData(srcTrList, tgtTrList, waList, alignFunc, ruleExFlag, wordRulesFlag,
 			else:
 				tmpSntFrame = SntFrame(srcTr, tgtTr, wa, alignFunc, ruleExFlag, wordRulesFlag, extensiveRulesFlag, verbose)
 				for rule in tmpSntFrame.ruleList:
-					r, rinv = rule.mosesFormatRule()
+					r, rinv = rule[0], rule[1]
+					#r, rinv = rule.mosesFormatRule()
 					f1.write(r)
 					f2.write(rinv)
 		else:

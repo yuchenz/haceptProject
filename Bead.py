@@ -9,7 +9,7 @@ import pdb
 debug_log = sys.stderr
 
 class Bead:
-	def __init__(self, srcTree, tgtTree, wordAlignment, subtreeAlignment, wordRulesFlag, extensiveRulesFlag,  verbose):
+	def __init__(self, srcTree, tgtTree, wordAlignment, subtreeAlignment, extensiveRulesFlag,  verbose):
 		"""
 		Initialize a Bead instance.
 		
@@ -23,8 +23,9 @@ class Bead:
 		:param wordAlignment: alignment between words, i.e. a matrix A,
 								where A[i][j] == 1 indicates source word i is aligned with target word j; 
 
-		:type subtreeAlignment: a list of 4-tuples
-		:param subtreeAlignment: each tuple (x1, y1, x2, y2) represents the subtree square on the word alignment matrix.
+		:type subtreeAlignment: a list of lists, which contain 4-tuples
+		:param subtreeAlignment: each element list is a frame,
+								 each tuple (x1, y1, x2, y2) represents the subtree square on the word alignment matrix.
 
 		:type wordRulesFlag: bool
 		:param wordRulesFlag: True means to add word alignments that are not in the subtree alignments into the ruleList,
@@ -45,12 +46,12 @@ class Bead:
 		self.wordAlignment = wordAlignment
 		self.subtreeAlignment = subtreeAlignment
 		# adding unary subtree alignments to the list
-		self.subtreeAlignment.extend(util.waMatrix2unarySubtreeAlignments(self.wordAlignment, self.srcTree, self.tgtTree))
-		self.subtreeAlignment = list(set(self.subtreeAlignment))
+		#self.subtreeAlignment.extend(util.waMatrix2unarySubtreeAlignments(self.wordAlignment, self.srcTree, self.tgtTree))
+		#self.subtreeAlignment = list(set(self.subtreeAlignment))
 		
 		#pdb.set_trace()
 		self.subtreeAlignmentDic = self._level_(self.subtreeAlignment)
-		self.ruleList = self._extractRules_(wordRulesFlag, extensiveRulesFlag)
+		self.ruleList = self._extractRules_(extensiveRulesFlag)
 
 	@classmethod
 	def loadData(cls, filename):
@@ -161,8 +162,10 @@ class Bead:
 		return beadList
 	
 	def __str__(self):
+		tmp = ''
+		'''
 		# src tree
-		tmp = self.srcTree.pprint().encode('utf-8')+"\n\n"
+		tmp += self.srcTree.pprint().encode('utf-8')+"\n\n"
 		# tgt tree
 		tmp += self.tgtTree.pprint().encode('utf-8')+"\n\n"
 		# word alignment matrix
@@ -171,15 +174,19 @@ class Bead:
 				tmp += str(self.wordAlignment[i][j])+' '
 			tmp += '\n'
 		tmp += '\n'
+		'''
 		# subtree alignments
+		tmp += str(len(self.subtreeAlignment)) + ' subtree alignments:\n'
 		for sbtrA in self.subtreeAlignment:
 			tmp += str(sbtrA)+'\n'
 		tmp += '\n'
 		# leveled subtree alignments
+		tmp += str(len(self.subtreeAlignmentDic.keys())) + ' leveled subtree alignments:\n'
 		for key in self.subtreeAlignmentDic:
 			tmp += str(key)+': '+str(self.subtreeAlignmentDic[key])+'\n'
 		tmp += '\n'
 		# rules
+		tmp += str(len(self.ruleList)) + ' rules in the Bead:\n'
 		for rule in self.ruleList:
 			tmp += rule.lhs + ' -> '
 			tmp += ' '.join([item.encode('utf-8') for item in rule.rhsSrc]) + ' | ' 
@@ -194,25 +201,32 @@ class Bead:
 		"""
 		Return a sorted and leveled subtree alignment dictionary.
 
-		:type subtreeAlignment: a list of 4-tuples
-		:param subtreeAlignment: each tuple (x1, y1, x2, y2) represents the subtree square on the word alignment matrix.
+		:type subtreeAlignment: a list of lists, which contain 4-tuples
+		:param subtreeAlignment: each element list is a frame,
+								 each tuple (x1, y1, x2, y2) represents the subtree square on the word alignment matrix.
 
 		"""
-		subtreeAlignSquareList = sorted(subtreeAlignment, key=(lambda x: (x[3]-x[1])*(x[2]-x[0])), reverse=True)
+		for lis in subtreeAlignment:
+			lis.sort(key = (lambda x: (x[3] - x[1]) * (x[2] - x[0])), reverse = True)
+		subtreeAlignment.sort(key = (lambda x: (x[0][3] - x[0][1]) * (x[0][2] - x[0][0])), reverse = True)
 
 		leveledSubtreeAlignment = {}
 		i = 1
-		while i < len(subtreeAlignSquareList):
-			square = subtreeAlignSquareList[i]
+		while i < len(subtreeAlignment):
+			smallFrame = subtreeAlignment[i]
 			for j in xrange(i-1, -1, -1):
-				if cls._inside_(square, subtreeAlignSquareList[j]):
-					leveledSubtreeAlignment[subtreeAlignSquareList[j]] = leveledSubtreeAlignment.get(subtreeAlignSquareList[j], [])
-					leveledSubtreeAlignment[subtreeAlignSquareList[j]].append(square)
+				bigFrame = subtreeAlignment[j]
+				if cls._inside_(smallFrame[0], bigFrame[0]):
+					for bigSquare in bigFrame:
+						leveledSubtreeAlignment[bigSquare] = leveledSubtreeAlignment.get(bigSquare, [])
+						leveledSubtreeAlignment[bigSquare].append(smallFrame)
 					break
 			i += 1
 
-		for key in leveledSubtreeAlignment:
-			leveledSubtreeAlignment[key].sort()
+		#for key in leveledSubtreeAlignment:
+			#leveledSubtreeAlignment[key].sort()
+			#print key, ':',
+			#print leveledSubtreeAlignment[key]
 
 		return leveledSubtreeAlignment
 
@@ -236,7 +250,49 @@ class Bead:
 		else:
 			return False
 
-	def _extractRules_(self, wordRulesFlag, extensiveRulesFlag):
+	def _extract_(self, key, subaList):
+		subaList.sort()
+		lhs = 'X'
+		rhsSrc, rhsTgt, align = [], [], []
+
+		#pdb.set_trace()
+		i = key[0]
+		for square in subaList: 
+			if square[0] != i:
+				for j in xrange(i, square[0]):
+					rhsSrc.append(j)
+					if not self.legalRule(rhsSrc + ['placeHolder'], ['placeHolder']): return False   # prune out illegal rules early
+			rhsSrc.append('X')
+			if not self.legalRule(rhsSrc + ['placeHolder'], ['placeHolder']): return False
+			i = square[2]
+		if key[2] != i:
+			for j in xrange(i, key[2]):
+				rhsSrc.append(j)
+				if not self.legalRule(rhsSrc + ['placeHolder'], ['placeHolder']): return False
+
+		i = key[1]
+		for k, square in enumerate(sorted(subaList, key=lambda x: x[1])):
+			if square[1] != i:
+				for j in xrange(i, square[1]):
+					rhsTgt.append(j)
+					if not self.legalRule(['placeHolder'], rhsTgt + ['placeHolder']): return False
+			rhsTgt.append('X')
+			if not self.legalRule(['placeHolder'], rhsTgt + ['placeHolder']): return False
+			align.append((subaList.index(square), k))
+			i = square[3]
+		if key[3] != i:
+			for j in xrange(i, key[3]):
+				rhsTgt.append(j)
+				if not self.legalRule(['placeHolder'], rhsTgt + ['placeHolder']): return False
+
+		tmpRule = Rule(lhs, rhsSrc, rhsTgt, align, self.wordAlignment, self.srcSnt, self.tgtSnt)
+		if self.verbose: print >> debug_log, tmpRule, '\t\t',
+		if self.legalRule(rhsSrc, rhsTgt):
+			return tmpRule   
+		else:
+			return False
+
+	def _extractRules_(self, extensiveRulesFlag):
 		"""
 		Return a list of rules extracted from this bead.
 
@@ -248,55 +304,26 @@ class Bead:
 		ruleList = []
 		# add in rules with non-terminal Xs
 		for key in self.subtreeAlignmentDic:
-			lhs = 'X'
-			rhsSrc, rhsTgt, align = [], [], []
-
-			i = key[0]
-			for square in self.subtreeAlignmentDic[key]:
-				if square[0] != i:
-					for j in xrange(i, square[0]):
-						rhsSrc.append(j)
-				rhsSrc.append('X')
-				i = square[2]
-			if key[2] != i:
-				for j in xrange(i, key[2]):
-					rhsSrc.append(j)
-
-			i = key[1]
-			for k, square in enumerate(sorted(self.subtreeAlignmentDic[key], key=lambda x: x[1])):
-				if square[1] != i:
-					for j in xrange(i, square[1]):
-						rhsTgt.append(j)
-				rhsTgt.append('X')
-				align.append((self.subtreeAlignmentDic[key].index(square), k))
-				i = square[3]
-			if key[3] != i:
-				for j in xrange(i, key[3]):
-					rhsTgt.append(j)
-
-			tmp = Rule(lhs, rhsSrc, rhsTgt, align, self.wordAlignment, self.srcSnt, self.tgtSnt)  
-			#print tmp
-			if self.legalRule(rhsSrc, rhsTgt):
-				#print 'legal'
-				ruleList.append(Rule(lhs, rhsSrc, rhsTgt, align, self.wordAlignment, self.srcSnt, self.tgtSnt))
+			for subaList in util.allCombinations(self.subtreeAlignmentDic[key]):
+				if self.verbose: print >> debug_log, key, ':', subaList
+				tmpRule = self._extract_(key, subaList)
+				if tmpRule: ruleList.append(tmpRule)
 
 		# add in rules with no non-terminal Xs, i.e. rules that are phrase pairs (only phrase pairs that satisfy the tree structures)
 		#pdb.set_trace()
-		for key in self.subtreeAlignmentDic:
+		for square in [suba for lis in self.subtreeAlignment for suba in lis]:
 			lhs = 'X'
-			rhsSrc, rhsTgt, align = [], [], []   # here align is for the alignment of Xs, not word alignment, so keep empty 
-			for square in self.subtreeAlignmentDic[key]:
-				if 1:  ### [experiment] include phrase pairs that are higher level 
-				#if square not in self.subtreeAlignmentDic:
-					rhsSrc = range(square[0], square[2])
-					rhsTgt = range(square[1], square[3])
-					tmp = Rule(lhs, rhsSrc, rhsTgt, align, self.wordAlignment, self.srcSnt, self.tgtSnt)
-					#print tmp
-					if self.legalRule(rhsSrc, rhsTgt):
-						#print "legal"
-						ruleList.append(Rule(lhs, rhsSrc, rhsTgt, align, self.wordAlignment, self.srcSnt, self.tgtSnt))
+			rhsSrc = range(square[0], square[2])
+			rhsTgt = range(square[1], square[3])
+			align = []
+			tmpRule = Rule(lhs, rhsSrc, rhsTgt, align, self.wordAlignment, self.srcSnt, self.tgtSnt)
+			if self.verbose: print >> debug_log, tmpRule, '\t\t',
+			if self.legalRule(rhsSrc, rhsTgt):
+				ruleList.append(tmpRule)
 
 		# if wordRulesFlag, add in rules that are word alignments (i.e. word pairs) but are not subtree alignments
+		# old version, deleted now
+		'''
 		if self.verbose:
 			print >> debug_log, "Bead got wordRulesFlag:", str(wordRulesFlag)
 		if wordRulesFlag:
@@ -314,6 +341,7 @@ class Bead:
 								tmpRule = Rule(lhs, rhsSrc, rhsTgt, align, self.wordAlignment, self.srcSnt, self.tgtSnt)
 								ruleList.append(tmpRule)
 						break
+		'''
 
 		# if extensiveRulesFlag, add in extensive rules which include:
 		#	- a rule with the determiner ("a" or "the") removed, e.g. given an existing rule "... ||| a peace agreement [X] ||| ...", 
@@ -323,7 +351,7 @@ class Bead:
 			tmpRuleList = []
 			for rule in ruleList:
 				if len(rule.rhsTgt) > 1 and rule.rhsTgt[0] in ["a", "the"] \
-						and '0' not in [align[1] for align in rule.alignment]:
+						and 0 not in [align[1] for align in rule.alignment]:
 					tmpRule = Rule(None, None, None, None, None, None, None)
 					tmpRule.lhs, tmpRule.rhsSrc, tmpRule.rhsTgt = rule.lhs, rule.rhsSrc, rule.rhsTgt[1:]
 					tmpRule.alignment = [(align[0], align[1] - 1) for align in rule.alignment]
@@ -345,27 +373,31 @@ class Bead:
 		numXSrc = rhsSrc.count('X')
 		numXTgt = rhsTgt.count('X')
 		if numXSrc > 2 or numXTgt > 2:
-			if self.verbose: print >> debug_log, "more than 2 Xs"
+			if self.verbose: print >> debug_log, "illegal: more than 2 Xs"
 			return False
-		if len(rhsSrc) - numXSrc > 5 or len(rhsSrc) - numXSrc < 1 or \
-				len(rhsTgt) - numXTgt > 5 or len(rhsTgt) - numXTgt < 1:
-					if self.verbose: print >> debug_log, "more than 5 terminals"
+		if len(rhsSrc) - numXSrc > 5 or len(rhsTgt) - numXTgt > 5:
+					if self.verbose: print >> debug_log, "illegal: more than 5 terminals"
+					return False
+		if len(rhsSrc) - numXSrc < 1 or len(rhsTgt) - numXTgt < 1:
+					if self.verbose: print >> debug_log, "illegal: less than 1 terminal"
 					return False
 		for i in rhsSrc:
-			if i != 'X' and len(self.srcSnt[i]) > 40:
-				if self.verbose: print >> debug_log, "src word longer than 40 characters"
+			if i != 'X' and i != 'placeHolder' and len(self.srcSnt[i]) > 40:
+				if self.verbose: print >> debug_log, "illegal: src word longer than 40 characters"
 				return False
-			elif i != 'X' and '|' in self.srcSnt[i]:
-				if self.verbose: print >> debug_log, "src side contains '|'"
+			elif i != 'X' and i != 'placeHolder' and '|' in self.srcSnt[i]:
+				if self.verbose: print >> debug_log, "illegal: src side contains '|'"
 				return False
 
 		for i in rhsTgt:
-			if i != 'X' and len(self.tgtSnt[i]) > 40:
-				if self.verbose: print >> debug_log, "tgt word longer than 40 characters"
+			if i != 'X' and i != 'placeHolder' and len(self.tgtSnt[i]) > 40:
+				if self.verbose: print >> debug_log, "illegal: tgt word longer than 40 characters"
 				return False
-			elif i != 'X' and '|' in self.tgtSnt[i]:
-				if self.verbose: print >> debug_log, "tgt side contains '|'"
+			elif i != 'X' and i != 'placeHolder' and '|' in self.tgtSnt[i]:
+				if self.verbose: print >> debug_log, "illegal: tgt side contains '|'"
 				return False
+
+		if self.verbose: print >> debug_log, "legal"
 
 		return True
 

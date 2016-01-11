@@ -64,11 +64,18 @@ class Rule:
 			ans.append((srcXDic[align[0]], tgtXDic[align[1]]))
 
 		return sorted(ans)
+
+	def __eq__(self, other):
+		if self.lhs == other.lhs and self.rhsSrc == other.rhsSrc and \
+				self.rhsTgt == other.rhsTgt and self.alignment == other.alignment:
+					return True
+		else:
+			return False
 	
 	def __str__(self):
 		tmp = self.lhs + ' -> ' + ' '.join([item.encode('utf-8') for item in self.rhsSrc]) + ' | ' + \
 				' '.join([item.encode('utf-8') for item in self.rhsTgt]) + ' | ' + \
-				' '.join([str(item) for item in self.alignment]) + '\n'
+				' '.join([str(item) for item in self.alignment]) 
 		return tmp
 
 	def mosesFormatRule(self):

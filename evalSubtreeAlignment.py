@@ -34,7 +34,7 @@ def evaluate(goldSubaFile, alignedSntFrameList, softEval=False, analysis=False):
 		else:
 			#assert ' '.join(sntFrame.srcWordList) == ' '.join(beadList[i].srcSnt), \
 			#		"ERROR!! sntFrame and bead are not matching!!!"
-			autoTuples = set([frame.subtreeAlignment_waMatrixPos for frame in sntFrame.frameList])
+			autoTuples = set([suba for frame in sntFrame.frameList for suba in frame.subtreeAlignment_waMatrixPos])
 			softAutoTuples = set([suba for frame in sntFrame.frameList for suba in frame.allPossibleSubtreeAlignment()])
 			softAutoFrames = set([tuple([suba for suba in frame.allPossibleSubtreeAlignment()]) for frame in sntFrame.frameList]) 
 		goldTuples = set(goldSuba[i])
