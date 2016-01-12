@@ -366,6 +366,7 @@ class Bead:
 		If both rhsSrc and rhsTgt:
 			- contain at least 1 but at most 5 terminals, and
 			- contain at most 2 non-terminals
+			- don't contain two Xs next to each other on the foreign language side
 			- don't contain any words longer than 10 characters
 		return True
 		otherwise, return False
@@ -381,6 +382,10 @@ class Bead:
 		if len(rhsSrc) - numXSrc < 1 or len(rhsTgt) - numXTgt < 1:
 					if self.verbose: print >> debug_log, "illegal: less than 1 terminal"
 					return False
+		if numXSrc == 2 and abs(rhsSrc.index('X') - (len(rhsSrc) - rhsSrc[::-1].index('X') - 1)) == 1:
+			if self.verbose: print >> debug_log, "illegal: two Xs next to each other on rhsSrc"
+			return False
+
 		for i in rhsSrc:
 			if i != 'X' and i != 'placeHolder' and len(self.srcSnt[i]) > 40:
 				if self.verbose: print >> debug_log, "illegal: src word longer than 40 characters"
