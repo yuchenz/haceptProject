@@ -240,7 +240,7 @@ class SntFrame:
 			if verbose:
 				print >> debug_log, "rules in the Bead:"
 
-			tmpBead = Bead(self.srcTree, self.tgtTree, self.waMatrix, tmpSubaList, extensiveRulesFlag, verbose)
+			tmpBead = Bead(self.srcTree, self.tgtTree, self.waMatrix, tmpSubaList, wordRulesFlag, extensiveRulesFlag, verbose)
 
 			if verbose:
 				print >> debug_log

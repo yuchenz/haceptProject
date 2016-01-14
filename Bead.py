@@ -9,7 +9,7 @@ import pdb
 debug_log = sys.stderr
 
 class Bead:
-	def __init__(self, srcTree, tgtTree, wordAlignment, subtreeAlignment, extensiveRulesFlag,  verbose):
+	def __init__(self, srcTree, tgtTree, wordAlignment, subtreeAlignment, wordRulesFlag, extensiveRulesFlag,  verbose):
 		"""
 		Initialize a Bead instance.
 		
@@ -51,7 +51,7 @@ class Bead:
 		
 		#pdb.set_trace()
 		self.subtreeAlignmentDic = self._level_(self.subtreeAlignment)
-		self.ruleList = self._extractRules_(extensiveRulesFlag)
+		self.ruleList = self._extractRules_(wordRulesFlag, extensiveRulesFlag)
 
 	@classmethod
 	def loadData(cls, filename):
@@ -292,7 +292,7 @@ class Bead:
 		else:
 			return False
 
-	def _extractRules_(self, extensiveRulesFlag):
+	def _extractRules_(self, wordRulesFlag, extensiveRulesFlag):
 		"""
 		Return a list of rules extracted from this bead.
 
@@ -321,12 +321,10 @@ class Bead:
 			if self.legalRule(rhsSrc, rhsTgt):
 				ruleList.append(tmpRule)
 
-		# if wordRulesFlag, add in rules that are word alignments (i.e. word pairs) but are not subtree alignments
-		# old version, deleted now
-		'''
+		# if not wordRulesFlag, only add in rules that are word alignments (i.e. word pairs) but not corresponding subtree alignments
 		if self.verbose:
 			print >> debug_log, "Bead got wordRulesFlag:", str(wordRulesFlag)
-		if wordRulesFlag:
+		if not wordRulesFlag:
 			if self.verbose: print >> debug_log, "wordRules are:"
 			lhs = 'X'
 			rhsSrc, rhsTgt, align = [], [], []   # here align is for the alignment of Xs, not word alignment, so keep empty 
@@ -341,7 +339,6 @@ class Bead:
 								tmpRule = Rule(lhs, rhsSrc, rhsTgt, align, self.wordAlignment, self.srcSnt, self.tgtSnt)
 								ruleList.append(tmpRule)
 						break
-		'''
 
 		# if extensiveRulesFlag, add in extensive rules which include:
 		#	- a rule with the determiner ("a" or "the") removed, e.g. given an existing rule "... ||| a peace agreement [X] ||| ...", 
