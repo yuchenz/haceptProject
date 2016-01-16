@@ -347,11 +347,12 @@ class Bead:
 		if extensiveRulesFlag:
 			tmpRuleList = []
 			for rule in ruleList:
-				if len(rule.rhsTgt) > 1 and rule.rhsTgt[0] in ["a", "the"] \
-						and 0 not in [align[1] for align in rule.alignment]:
+				if len(rule.rhsTgt) > 1 and rule.rhsTgt[0] in ["a", "the"]:
+						#and 0 not in [align[1] for align in rule.alignment]:
 					tmpRule = Rule(None, None, None, None, None, None, None)
 					tmpRule.lhs, tmpRule.rhsSrc, tmpRule.rhsTgt = rule.lhs, rule.rhsSrc, rule.rhsTgt[1:]
-					tmpRule.alignment = [(align[0], align[1] - 1) for align in rule.alignment]
+					#tmpRule.alignment = [(align[0], align[1] - 1) for align in rule.alignment]
+					tmpRule.alignment = [(align[0], align[1] - 1) for align in rule.alignment if align[1] > 0]
 					#print tmpRule.alignment
 					tmpRuleList.append(tmpRule)
 			ruleList.extend(tmpRuleList)
