@@ -47,6 +47,8 @@ def main():
 
 	arg_parser.add_argument('--lexTrans', action='store_true', help='turn on building lexical translation tables', default=False)
 
+	arg_parser.add_argument('--fractionalCount', action='store_true', help='use fractional count when extracting rules', default=False)
+
 	args = arg_parser.parse_args()
 
 	# files that need to be prepared in ahead
@@ -82,7 +84,7 @@ def main():
 	sntFrameList = align(os.path.join(args.temp_dir, compiled_data + lan1_suffix + bps_suffix), 
 			os.path.join(args.temp_dir, compiled_data + lan2_suffix + bps_suffix),
 			os.path.join(args.temp_dir, wa_file), args.align_func, args.num_proc, args.ex, args.wordRulesFlag, 
-			args.minMemFlag, args.verbose, args.extensiveRulesFlag)
+			args.minMemFlag, args.verbose, args.extensiveRulesFlag, args.fractionalCount)
 	print >> out, 'sntFrameList size: ', len(sntFrameList)
 	print >> out, 'subtree alignment time: ', time.clock() - s
 

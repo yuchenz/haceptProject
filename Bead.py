@@ -191,7 +191,8 @@ class Bead:
 			tmp += rule.lhs + ' -> '
 			tmp += ' '.join([item.encode('utf-8') for item in rule.rhsSrc]) + ' | ' 
 			tmp += ' '.join([item.encode('utf-8') for item in rule.rhsTgt]) + ' | ' 
-			tmp += ' '.join([str(item) for item in rule.alignment]) + '\n'
+			tmp += ' '.join([str(item) for item in rule.alignment]) 
+			tmp += '\t\t......\t\t' + str(rule.square) + '\n'
 		tmp += '\n'
 
 		return tmp
@@ -285,8 +286,8 @@ class Bead:
 				rhsTgt.append(j)
 				if not self.legalRule(['placeHolder'], rhsTgt + ['placeHolder']): return False
 
-		tmpRule = Rule(lhs, rhsSrc, rhsTgt, align, self.wordAlignment, self.srcSnt, self.tgtSnt)
-		if self.verbose: print >> debug_log, tmpRule, '\t\t',
+		tmpRule = Rule(lhs, rhsSrc, rhsTgt, align, self.wordAlignment, self.srcSnt, self.tgtSnt, key)
+		#if self.verbose: print >> debug_log, tmpRule, '\t\t',
 		if self.legalRule(rhsSrc, rhsTgt):
 			return tmpRule   
 		else:
@@ -305,7 +306,7 @@ class Bead:
 		# add in rules with non-terminal Xs
 		for key in self.subtreeAlignmentDic:
 			for subaList in util.allCombinations(self.subtreeAlignmentDic[key]):
-				if self.verbose: print >> debug_log, key, ':', subaList
+				#if self.verbose: print >> debug_log, key, ':', subaList
 				tmpRule = self._extract_(key, subaList)
 				if tmpRule: ruleList.append(tmpRule)
 
@@ -316,16 +317,16 @@ class Bead:
 			rhsSrc = range(square[0], square[2])
 			rhsTgt = range(square[1], square[3])
 			align = []
-			tmpRule = Rule(lhs, rhsSrc, rhsTgt, align, self.wordAlignment, self.srcSnt, self.tgtSnt)
-			if self.verbose: print >> debug_log, tmpRule, '\t\t',
+			tmpRule = Rule(lhs, rhsSrc, rhsTgt, align, self.wordAlignment, self.srcSnt, self.tgtSnt, square)
+			#if self.verbose: print >> debug_log, tmpRule, '\t\t',
 			if self.legalRule(rhsSrc, rhsTgt):
 				ruleList.append(tmpRule)
 
 		# if not wordRulesFlag, only add in rules that are word alignments (i.e. word pairs) but not corresponding subtree alignments
-		if self.verbose:
-			print >> debug_log, "Bead got wordRulesFlag:", str(wordRulesFlag)
+		#if self.verbose:
+			#print >> debug_log, "Bead got wordRulesFlag:", str(wordRulesFlag)
 		if not wordRulesFlag:
-			if self.verbose: print >> debug_log, "wordRules are:"
+			#if self.verbose: print >> debug_log, "wordRules are:"
 			lhs = 'X'
 			rhsSrc, rhsTgt, align = [], [], []   # here align is for the alignment of Xs, not word alignment, so keep empty 
 			for i in xrange(len(self.wordAlignment)):
@@ -333,10 +334,10 @@ class Bead:
 					if self.wordAlignment[i][j]:
 						if sum(self.wordAlignment[i]) == 1 and sum([row[j] for row in self.wordAlignment]) == 1:
 							rhsSrc, rhsTgt = [i], [j]
-							if self.verbose: print >> debug_log, i, j, self.srcSnt[i], self.tgtSnt[j]
+							#if self.verbose: print >> debug_log, i, j, self.srcSnt[i].encode('utf-8'), self.tgtSnt[j].encode('utf-8')
 							if self.legalRule(rhsSrc, rhsTgt):
-								if self.verbose: print >> debug_log, "legal"
-								tmpRule = Rule(lhs, rhsSrc, rhsTgt, align, self.wordAlignment, self.srcSnt, self.tgtSnt)
+								#if self.verbose: print >> debug_log, "legal"
+								tmpRule = Rule(lhs, rhsSrc, rhsTgt, align, self.wordAlignment, self.srcSnt, self.tgtSnt, (i, j, i + 1, j + 1))
 								ruleList.append(tmpRule)
 						break
 
@@ -349,11 +350,12 @@ class Bead:
 			for rule in ruleList:
 				if len(rule.rhsTgt) > 1 and rule.rhsTgt[0] in ["a", "the"]:
 						#and 0 not in [align[1] for align in rule.alignment]:
-					tmpRule = Rule(None, None, None, None, None, None, None)
+					tmpRule = Rule(None, None, None, None, None, None, None, None)
 					tmpRule.lhs, tmpRule.rhsSrc, tmpRule.rhsTgt = rule.lhs, rule.rhsSrc, rule.rhsTgt[1:]
 					#tmpRule.alignment = [(align[0], align[1] - 1) for align in rule.alignment]
 					tmpRule.alignment = [(align[0], align[1] - 1) for align in rule.alignment if align[1] > 0]
 					#print tmpRule.alignment
+					tmpRule.square = rule.square[0], rule.square[1] + 1, rule.square[2], rule.square[3]
 					tmpRuleList.append(tmpRule)
 			ruleList.extend(tmpRuleList)
 
@@ -372,35 +374,35 @@ class Bead:
 		numXSrc = rhsSrc.count('X')
 		numXTgt = rhsTgt.count('X')
 		if numXSrc > 2 or numXTgt > 2:
-			if self.verbose: print >> debug_log, "illegal: more than 2 Xs"
+			#if self.verbose: print >> debug_log, "illegal: more than 2 Xs",
 			return False
 		if len(rhsSrc) - numXSrc > 5 or len(rhsTgt) - numXTgt > 5:
-					if self.verbose: print >> debug_log, "illegal: more than 5 terminals"
+					#if self.verbose: print >> debug_log, "illegal: more than 5 terminals",
 					return False
 		if len(rhsSrc) - numXSrc < 1 or len(rhsTgt) - numXTgt < 1:
-					if self.verbose: print >> debug_log, "illegal: less than 1 terminal"
+					#if self.verbose: print >> debug_log, "illegal: less than 1 terminal",
 					return False
 		if numXSrc == 2 and abs(rhsSrc.index('X') - (len(rhsSrc) - rhsSrc[::-1].index('X') - 1)) == 1:
-			if self.verbose: print >> debug_log, "illegal: two Xs next to each other on rhsSrc"
+			#if self.verbose: print >> debug_log, "illegal: two Xs next to each other on rhsSrc",
 			return False
 
 		for i in rhsSrc:
 			if i != 'X' and i != 'placeHolder' and len(self.srcSnt[i]) > 40:
-				if self.verbose: print >> debug_log, "illegal: src word longer than 40 characters"
+				#if self.verbose: print >> debug_log, "illegal: src word longer than 40 characters",
 				return False
 			elif i != 'X' and i != 'placeHolder' and '|' in self.srcSnt[i]:
-				if self.verbose: print >> debug_log, "illegal: src side contains '|'"
+				#if self.verbose: print >> debug_log, "illegal: src side contains '|'",
 				return False
 
 		for i in rhsTgt:
 			if i != 'X' and i != 'placeHolder' and len(self.tgtSnt[i]) > 40:
-				if self.verbose: print >> debug_log, "illegal: tgt word longer than 40 characters"
+				#if self.verbose: print >> debug_log, "illegal: tgt word longer than 40 characters",
 				return False
 			elif i != 'X' and i != 'placeHolder' and '|' in self.tgtSnt[i]:
-				if self.verbose: print >> debug_log, "illegal: tgt side contains '|'"
+				#if self.verbose: print >> debug_log, "illegal: tgt side contains '|'",
 				return False
 
-		if self.verbose: print >> debug_log, "legal"
+		#if self.verbose: print >> debug_log, "legal",
 
 		return True
 

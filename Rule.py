@@ -3,7 +3,7 @@
 import pdb
 
 class Rule:
-	def __init__(self, lhs, rhsSrc, rhsTgt, alignment, wordAlignment, srcSnt, tgtSnt):
+	def __init__(self, lhs, rhsSrc, rhsTgt, alignment, wordAlignment, srcSnt, tgtSnt, square):
 		"""
 		Initialize a SCFG rule.
 
@@ -32,13 +32,16 @@ class Rule:
 
 		"""
 		if lhs == None:
-			self.lhs, self.rhsSrc, self.rhsTgt, self.alignment = None, None, None, None
+			self.lhs, self.rhsSrc, self.rhsTgt, self.alignment, self.square = None, None, None, None, None
 		else:
 			self.lhs = lhs
 			self.rhsSrc = [srcSnt[i] if i != 'X' else 'X' for i in rhsSrc] 
 			self.rhsTgt = [tgtSnt[i] if i != 'X' else 'X' for i in rhsTgt] 
 			#print self.rhsSrc, self.rhsTgt, alignment
 			self.alignment = self.setupAlignment(alignment, wordAlignment, rhsSrc, rhsTgt)
+			self.square = square
+
+		self.count = 1
 
 	def setupAlignment(self, alignment, wordAlignment, rhsSrc, rhsTgt):
 		#pdb.set_trace()
@@ -75,7 +78,8 @@ class Rule:
 	def __str__(self):
 		tmp = self.lhs + ' -> ' + ' '.join([item.encode('utf-8') for item in self.rhsSrc]) + ' | ' + \
 				' '.join([item.encode('utf-8') for item in self.rhsTgt]) + ' | ' + \
-				' '.join([str(item) for item in self.alignment]) 
+				' '.join([str(item) for item in self.alignment]) + \
+				' ||| covering ' +  str(self.square)
 		return tmp
 
 	def mosesFormatRule(self):
@@ -100,6 +104,6 @@ class Rule:
 			rule.append(str(item[0])+'-'+str(item[1]))
 			ruleInv.append(str(item[1])+'-'+str(item[0]))
 
-		rule.append('||| 1 \n')		# set the count as 1 by default
-		ruleInv.append('||| 1 \n')		# set the count as 1 by default
+		rule.append('||| ' + str(self.count) + ' \n')		
+		ruleInv.append('||| ' + str(self.count) + ' \n')
 		return ' '.join(rule), ' '.join(ruleInv)
