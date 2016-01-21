@@ -548,6 +548,7 @@ class SntFrame:
 		for rule in ruleList:
 			key = (' '.join(rule.rhsSrc), ' '.join(rule.rhsTgt), tuple(rule.alignment))
 			rule.count = consolidatedCount[key]
+			consolidatedCount[key] = 0
 
 		return ruleList
 
