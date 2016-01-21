@@ -246,10 +246,7 @@ class SntFrame:
 				print >> debug_log, tmpBead
 				print >> debug_log
 
-			if fractionalCountFlag:
-				self.ruleList = [rule.mosesFormatRule() for rule in self.consolidateRules(tmpBead.ruleList)]
-			else:
-				self.ruleList = [rule.mosesFormatRule() for rule in tmpBead.ruleList]
+			self.ruleList = [rule.mosesFormatRule() for rule in self.consolidateRules(tmpBead.ruleList, fractionalCountFlag) if rule.count > 0]
 
 		if verbose:
 			print >> debug_log, "SntFrame got the following rules: (" + str(len(self.ruleList)) + ")"
@@ -528,16 +525,16 @@ class SntFrame:
 		for frame in self.frameList:
 			frame.subtreeAlign(subtreeAlignFunc, self.srcTree, self.tgtTree)
 
-	def consolidateRules(self, ruleList):
-		spanCount = {}
+	def consolidateRules(self, ruleList, fractionalCountFlag):
+		if franctionalCountFlag:
+			spanCount = {}
+			# compute number of rules per span
+			for rule in ruleList:
+				spanCount[rule.square] = spanCount.get(rule.square, 0) + 1
 
-		# compute number of rules per span
-		for rule in ruleList:
-			spanCount[rule.square] = spanCount.get(rule.square, 0) + 1
-
-		# compute fractional counts
-		for rule in ruleList:
-			rule.count = 1.0 / spanCount[rule.square]
+			# compute fractional counts
+			for rule in ruleList:
+				rule.count = 1.0 / spanCount[rule.square]
 
 		# consolidate counts:
 		consolidatedCount = {}
