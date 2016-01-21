@@ -526,15 +526,17 @@ class SntFrame:
 			frame.subtreeAlign(subtreeAlignFunc, self.srcTree, self.tgtTree)
 
 	def consolidateRules(self, ruleList, fractionalCountFlag):
-		if franctionalCountFlag:
-			spanCount = {}
-			# compute number of rules per span
-			for rule in ruleList:
-				spanCount[rule.square] = spanCount.get(rule.square, 0) + 1
+		spanCount = {}
+		# compute number of rules per span
+		for rule in ruleList:
+			spanCount[rule.square] = spanCount.get(rule.square, 0) + 1
 
-			# compute fractional counts
-			for rule in ruleList:
+		# compute fractional counts
+		for rule in ruleList:
+			if fractionalCountFlag:
 				rule.count = 1.0 / spanCount[rule.square]
+			else:
+				rule.count = 1.0
 
 		# consolidate counts:
 		consolidatedCount = {}
