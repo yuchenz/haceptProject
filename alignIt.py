@@ -8,6 +8,7 @@ from subtreeAlign import align, topAlign
 from sntAlign import sntAlign
 from evalSubtreeAlignment import evaluate
 from Bead import Bead
+from corpusCount import corpusCount
 import time
 import re
 
@@ -49,6 +50,8 @@ def main():
 
 	arg_parser.add_argument('--noFractionalCount', action='store_true', help='by default fractional count is used when extracting rules, \
 			turn on --noFractionalCount to disable it', default=False)
+
+	arg_parser.add_argument('--corpusCnt', action='store_true', help='turn on corpus count, i.e. count rules in the corpus, not only in the extraction log', default=False)
 
 	args = arg_parser.parse_args()
 
@@ -133,9 +136,28 @@ def main():
 			a = re.sub('-lbr-', '(', a)
 			a = re.sub('-rbr-', ')', a)
 			ans1[i] = re.sub('-at-', '@', a)
+			
+		if args.corpusCnt:
+			print >> out, 'corpus count ...\n'
+			print >> out, '\t reading in ch, en corpus ...'
+			srcSentFilename = os.path.join(args.temp_dir, compiled_data + lan1_suffix)
+			tgtSentFilename = os.path.join(args.temp_dir, compiled_data + lan2_suffix)
+
+			srcSentList = codecs.open(srcSentFilename, 'r', 'utf-8').readlines()
+			tgtSentList = codecs.open(tgtSentFilename, 'r', 'utf-8').read().split('\n')[:-1]
+
+			srcSentList = [line.lower().split() for line in srcSentList]
+			tgtSentList = [line.lower().split() for line in tgtSentList]
+			print >> out, '\t ch corpus: ', len(srcSentList)
+			print >> out, '\t en corpus: ', len(tgtSentList)
+			print >> out, '\t rules: ', len(ans), len(ans1)
+
+			corpusCount(ans, ans1, srcSentList, tgtSentList, args.verbose)
+			print >> out, '\ncorpus count time: ', time.clock() - s
 
 		ans.sort(); ans1.sort()
 		print >> out, 'sorting rules / inversed rules time: ', time.clock() - s
+
 		s = time.clock()
 		outf = codecs.open(os.path.join('/dev/shm/', args.stem+'.exRules'), 'w', 'utf-8')
 		outf1 = codecs.open(os.path.join('/dev/shm/', args.stem+'.inv.exRules'), 'w', 'utf-8')
