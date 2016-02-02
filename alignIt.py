@@ -127,16 +127,6 @@ def main():
 					ans.append(ruleNInv)
 					ans1.append(ruleInv)
 
-		# change '-lbr-' into '(', '-rbr-' into ')', and '-at-' into '@'
-		for i, a in enumerate(ans):
-			a = re.sub('-lbr-', '(', a)
-			a = re.sub('-rbr-', ')', a)
-			ans[i] = re.sub('-at-', '@', a)
-		for i, a in enumerate(ans1):
-			a = re.sub('-lbr-', '(', a)
-			a = re.sub('-rbr-', ')', a)
-			ans1[i] = re.sub('-at-', '@', a)
-			
 		if args.corpusCnt:
 			print >> out, 'corpus count ...\n'
 			print >> out, '\t reading in ch, en corpus ...'
@@ -155,6 +145,16 @@ def main():
 			corpusCount(ans, ans1, srcSentList, tgtSentList, args.verbose)
 			print >> out, '\ncorpus count time: ', time.clock() - s
 
+		# change '-lbr-' into '(', '-rbr-' into ')', and '-at-' into '@'
+		for i, a in enumerate(ans):
+			a = re.sub('-lbr-', '(', a)
+			a = re.sub('-rbr-', ')', a)
+			ans[i] = re.sub('-at-', '@', a)
+		for i, a in enumerate(ans1):
+			a = re.sub('-lbr-', '(', a)
+			a = re.sub('-rbr-', ')', a)
+			ans1[i] = re.sub('-at-', '@', a)
+			
 		ans.sort(); ans1.sort()
 		print >> out, 'sorting rules / inversed rules time: ', time.clock() - s
 

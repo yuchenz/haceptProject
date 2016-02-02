@@ -1,6 +1,8 @@
 #!/usr/bin/python2.7
 
 import pdb
+import time 
+import sys
 
 def genDict(tupleList):
 	'''
@@ -33,12 +35,19 @@ def xgram(corpus, x):
 def corpusCount(ruleList, ruleInvList, corpusCh, corpusEn, verbose):
 	print 
 
+	s = time.clock()
+
 	ruleList2 = [line.split('|||') for line in ruleList]
+	print 'splitted ruleList2: ', time.clock() - s
 	ruleList2 = [[line[0].strip().split()[:-1], line[1].strip().split()[:-1], line[2].strip(), float(line[3].strip())] \
 			for line in ruleList2]
-
+	print 'stripped ruleList2: ', time.clock() - s
+	
 	chCount = genDict([(tuple(line[0]), line[3]) for line in ruleList2 if '[X][X]' not in line[0]])
+	print 'created chCount dictionary: ', time.clock() - s
 	enCount = genDict([(tuple(line[1]), line[3]) for line in ruleList2 if '[X][X]' not in line[1]])
+	print 'created enCount dictionary: ', time.clock() - s
+	print
 
 	#print "\t# total distinct ch phrases: ", len(chCount.keys())
 	#print "\t# total distinct en phrases: ", len(enCount.keys())
@@ -57,7 +66,9 @@ def corpusCount(ruleList, ruleInvList, corpusCh, corpusEn, verbose):
 		xgramDict = xgram(corpusCh, keyLen)
 		for key in chCount:
 			if len(key) == keyLen: 
-				assert key in xgramDict, "key %s not found in corpus" % ' '.join(key)
+				if key not in xgramDict:
+					print >> sys.stderr, "key %s not found in corpus, key frequency in the rule table: %f" % (' '.join(key), chCount[key])
+					continue
 				tmp = xgramDict[key] - chCount[key]
 				if tmp > 0:
 					ruleList.append(' '.join(key) + ' [X] ||| placeholder [X] ||| 0-0 ||| ' + \
@@ -70,7 +81,9 @@ def corpusCount(ruleList, ruleInvList, corpusCh, corpusEn, verbose):
 		xgramDict = xgram(corpusEn, keyLen)
 		for key in enCount:
 			if len(key) == keyLen: 
-				assert key in xgramDict, "key %s not found in corpus" % ' '.join(key)
+				if key not in xgramDict:
+					print >> sys.stderr, "key %s not found in corpus, key frequency in the rule table: %f" % (' '.join(key), enCount[key])
+					continue
 				tmp = xgramDict[key] - enCount[key]
 				if tmp > 0:
 					ruleList.append('placeholder [X] ||| ' + ' '.join(key) + ' [X] ||| 0-0 ||| ' + \
