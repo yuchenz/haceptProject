@@ -5,11 +5,12 @@ from Rule import Rule
 import util
 import sys
 import pdb
+from extractPP import extractMinPhrasePairs
 
 debug_log = sys.stderr
 
 class Bead:
-	def __init__(self, srcTree, tgtTree, wordAlignment, subtreeAlignment, wordRulesFlag, extensiveRulesFlag,  verbose):
+	def __init__(self, srcTree, tgtTree, wordAlignment, subtreeAlignment, wordRulesFlag, extensiveRulesFlag, phraseRulesFlag, verbose):
 		"""
 		Initialize a Bead instance.
 		
@@ -51,7 +52,7 @@ class Bead:
 		
 		#pdb.set_trace()
 		self.subtreeAlignmentDic = self._level_(self.subtreeAlignment)
-		self.ruleList = self._extractRules_(wordRulesFlag, extensiveRulesFlag)
+		self.ruleList = self._extractRules_(wordRulesFlag, extensiveRulesFlag, phraseRulesFlag)
 
 	@classmethod
 	def loadData(cls, filename):
@@ -293,7 +294,7 @@ class Bead:
 		else:
 			return False
 
-	def _extractRules_(self, wordRulesFlag, extensiveRulesFlag):
+	def _extractRules_(self, wordRulesFlag, extensiveRulesFlag, phraseRulesFlag):
 		"""
 		Return a list of rules extracted from this bead.
 
@@ -310,22 +311,27 @@ class Bead:
 				tmpRule = self._extract_(key, subaList)
 				if tmpRule: ruleList.append(tmpRule)
 
+		# add in phrase pairs as rules
 		# add in rules with no non-terminal Xs, i.e. rules that are phrase pairs (only phrase pairs that satisfy the tree structures)
+		squareList = [suba for lis in self.subtreeAlignment for suba in lis]
+		# if phraseRulesFlag, add in all phrase pairs, including the ones that don't satisfy the tree structures
+		if phraseRulesFlag:
+			squareList += extractMinPhrasePairs(self.wordAlignment)
 		#pdb.set_trace()
-		for square in [suba for lis in self.subtreeAlignment for suba in lis]:
+		for square in squareList: 
 			lhs = 'X'
 			rhsSrc = range(square[0], square[2])
 			rhsTgt = range(square[1], square[3])
 			align = []
-			tmpRule = Rule(lhs, rhsSrc, rhsTgt, align, self.wordAlignment, self.srcSnt, self.tgtSnt, square)
-			#if self.verbose: print >> debug_log, tmpRule, '\t\t',
 			if self.legalRule(rhsSrc, rhsTgt):
+				tmpRule = Rule(lhs, rhsSrc, rhsTgt, align, self.wordAlignment, self.srcSnt, self.tgtSnt, square)
+				#if self.verbose: print >> debug_log, tmpRule, '\t\t',
 				ruleList.append(tmpRule)
 
 		# if not wordRulesFlag, only add in rules that are word alignments (i.e. word pairs) but not corresponding subtree alignments
 		#if self.verbose:
 			#print >> debug_log, "Bead got wordRulesFlag:", str(wordRulesFlag)
-		if not wordRulesFlag:
+		if not wordRulesFlag and not phraseRulesFlag:
 			#if self.verbose: print >> debug_log, "wordRules are:"
 			lhs = 'X'
 			rhsSrc, rhsTgt, align = [], [], []   # here align is for the alignment of Xs, not word alignment, so keep empty 

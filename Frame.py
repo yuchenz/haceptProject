@@ -194,7 +194,7 @@ class Frame:
 		return ans
 
 class SntFrame:
-	def __init__(self, srcTree, tgtTree, wordAlignment, alignFunc, ruleExFlag, wordRulesFlag, extensiveRulesFlag, fractionalCountFlag, verbose): 
+	def __init__(self, srcTree, tgtTree, wordAlignment, alignFunc, ruleExFlag, wordRulesFlag, extensiveRulesFlag, fractionalCountFlag, phraseRulesFlag, verbose): 
 		"""
 		Initialize a FrameList instance.
 
@@ -238,7 +238,7 @@ class SntFrame:
 				print >> debug_log
 				print >> debug_log, "rules in the Bead:"
 
-			tmpBead = Bead(self.srcTree, self.tgtTree, self.waMatrix, tmpSubaList, wordRulesFlag, extensiveRulesFlag, verbose)
+			tmpBead = Bead(self.srcTree, self.tgtTree, self.waMatrix, tmpSubaList, wordRulesFlag, extensiveRulesFlag, phraseRulesFlag, verbose)
 
 			if verbose:
 				print >> debug_log
@@ -551,7 +551,7 @@ class SntFrame:
 
 		return ruleList
 
-def loadData(srcTrList, tgtTrList, waList, alignFunc, ruleExFlag, wordRulesFlag, minMemFlag, procID, verbose, extensiveRulesFlag, fractionalCountFlag):
+def loadData(srcTrList, tgtTrList, waList, alignFunc, ruleExFlag, wordRulesFlag, minMemFlag, procID, verbose, extensiveRulesFlag, fractionalCountFlag, phraseRulesFlag):
 	if minMemFlag:
 		if 'hacept' not in os.listdir('/dev/shm'):
 			os.mkdir('/dev/shm/hacept')
@@ -570,7 +570,7 @@ def loadData(srcTrList, tgtTrList, waList, alignFunc, ruleExFlag, wordRulesFlag,
 			if len(srcTr.leaves()) == 0 or len(tgtTr.leaves()) == 0:
 				continue
 			else:
-				tmpSntFrame = SntFrame(srcTr, tgtTr, wa, alignFunc, ruleExFlag, wordRulesFlag, extensiveRulesFlag, fractionalCountFlag, verbose)
+				tmpSntFrame = SntFrame(srcTr, tgtTr, wa, alignFunc, ruleExFlag, wordRulesFlag, extensiveRulesFlag, fractionalCountFlag, phraseRulesFlag, verbose)
 				for rule in tmpSntFrame.ruleList:
 					r, rinv = rule[0], rule[1]
 					#r, rinv = rule.mosesFormatRule()
@@ -580,13 +580,13 @@ def loadData(srcTrList, tgtTrList, waList, alignFunc, ruleExFlag, wordRulesFlag,
 			if len(srcTr.leaves()) == 0 or len(tgtTr.leaves()) == 0:
 				result.append(None)
 			else:
-				tmpSntFrame = SntFrame(srcTr, tgtTr, wa, alignFunc, ruleExFlag, wordRulesFlag, extensiveRulesFlag, fractionalCountFlag, verbose)
+				tmpSntFrame = SntFrame(srcTr, tgtTr, wa, alignFunc, ruleExFlag, wordRulesFlag, extensiveRulesFlag, fractionalCountFlag, phraseRulesFlag, verbose)
 				result.append(tmpSntFrame)
 
 	if minMemFlag: return [None]
 	else: return result
 
-def loadDataParallelWrapper(srctrFilename, tgttrFilename, waFilename, numProc, alignFunc, ruleExFlag, wordRulesFlag, minMemFlag, verbose, extensiveRulesFlag, fractionalCountFlag):
+def loadDataParallelWrapper(srctrFilename, tgttrFilename, waFilename, numProc, alignFunc, ruleExFlag, wordRulesFlag, minMemFlag, verbose, extensiveRulesFlag, fractionalCountFlag, phraseRulesFlag):
 	s = time.clock()
 	#srcTreeList = [nltk.ParentedTree(re.sub(' \(\)', ' -lbr-)', re.sub(' \)\)', ' -rbr-)', line))) for line in codecs.open(srctrFilename, 'r', 'utf-8')]
 	srcTreeList = codecs.open(srctrFilename, 'r', 'utf-8').readlines()
@@ -611,12 +611,12 @@ def loadDataParallelWrapper(srctrFilename, tgttrFilename, waFilename, numProc, a
 		for i in xrange(1, numProc + 1):
 			start = base * (i - 1)
 			end = base * i if i < numProc else len(waList)
-			tmp.append(pool.apply_async(loadData, args=(srcTreeList[start:end], tgtTreeList[start:end], waList[start:end], alignFunc, ruleExFlag, wordRulesFlag, minMemFlag, i, verbose, extensiveRulesFlag, fractionalCountFlag)))
+			tmp.append(pool.apply_async(loadData, args=(srcTreeList[start:end], tgtTreeList[start:end], waList[start:end], alignFunc, ruleExFlag, wordRulesFlag, minMemFlag, i, verbose, extensiveRulesFlag, fractionalCountFlag, phraseRulesFlag)))
 
 		for t in tmp:
 			sntList.extend(t.get())
 	else:
-		sntList = loadData(srcTreeList, tgtTreeList, waList, alignFunc, ruleExFlag, wordRulesFlag, minMemFlag, 1, verbose, extensiveRulesFlag, fractionalCountFlag)
+		sntList = loadData(srcTreeList, tgtTreeList, waList, alignFunc, ruleExFlag, wordRulesFlag, minMemFlag, 1, verbose, extensiveRulesFlag, fractionalCountFlag, phraseRulesFlag)
 
 	if minMemFlag:
 		if 'rule.all' in os.listdir('/dev/shm/hacept/'):

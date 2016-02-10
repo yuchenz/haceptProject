@@ -50,8 +50,8 @@ def allAlign(frame, srcTr, tgtTr):
 
 alignFuncMap = {'top' : topAlign, 'bottom' : bottomAlign, 'all' : allAlign}
 
-def align(srcTreeFilename, tgtTreeFilename, waFilename, alignFunc, numProc, ruleExFlag, wordRulesFlag, minMemFlag, verbose, extensiveRulesFlag, fractionalCountFlag):
-	sntFrameList = loadDataParallelWrapper(srcTreeFilename, tgtTreeFilename, waFilename, numProc, alignFuncMap[alignFunc], ruleExFlag, wordRulesFlag, minMemFlag, verbose, extensiveRulesFlag, fractionalCountFlag)
+def align(srcTreeFilename, tgtTreeFilename, waFilename, alignFunc, numProc, ruleExFlag, wordRulesFlag, minMemFlag, verbose, extensiveRulesFlag, fractionalCountFlag, phraseRulesFlag):
+	sntFrameList = loadDataParallelWrapper(srcTreeFilename, tgtTreeFilename, waFilename, numProc, alignFuncMap[alignFunc], ruleExFlag, wordRulesFlag, minMemFlag, verbose, extensiveRulesFlag, fractionalCountFlag, phraseRulesFlag)
 	return sntFrameList
 
 if __name__ == '__main__':

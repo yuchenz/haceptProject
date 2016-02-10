@@ -53,6 +53,9 @@ def main():
 
 	arg_parser.add_argument('--corpusCnt', action='store_true', help='turn on corpus count, i.e. count rules in the corpus, not only in the extraction log', default=False)
 
+	arg_parser.add_argument('--phraseRulesFlag', action='store_true', help='turn on phrase rule extraction, \
+			i.e. add all phrase pairs including the ones not consistent with the tree structures', default=False)
+
 	args = arg_parser.parse_args()
 
 	# files that need to be prepared in ahead
@@ -88,7 +91,7 @@ def main():
 	sntFrameList = align(os.path.join(args.temp_dir, compiled_data + lan1_suffix + bps_suffix), 
 			os.path.join(args.temp_dir, compiled_data + lan2_suffix + bps_suffix),
 			os.path.join(args.temp_dir, wa_file), args.align_func, args.num_proc, args.ex, args.wordRulesFlag, 
-			args.minMemFlag, args.verbose, args.extensiveRulesFlag, not args.noFractionalCount)
+			args.minMemFlag, args.verbose, args.extensiveRulesFlag, not args.noFractionalCount, args.phraseRulesFlag)
 	print >> out, 'sntFrameList size: ', len(sntFrameList)
 	print >> out, 'subtree alignment time: ', time.clock() - s
 
