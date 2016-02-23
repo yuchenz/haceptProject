@@ -39,6 +39,7 @@ class Bead:
 
 		"""
 		self.verbose = verbose
+		self.s2t = s2t
 
 		self.srcTree = srcTree
 		self.srcSnt = [word.lower() for word in srcTree.leaves()]
@@ -52,7 +53,7 @@ class Bead:
 		
 		#pdb.set_trace()
 		self.subtreeAlignmentDic = self._level_(self.subtreeAlignment)
-		self.ruleList = self._extractRules_(wordRulesFlag, extensiveRulesFlag, phraseRulesFlag, s2t)
+		self.ruleList, self.glueRuleList = self._extractRules_(wordRulesFlag, extensiveRulesFlag, phraseRulesFlag, s2t)
 
 	@classmethod
 	def loadData(cls, filename):
@@ -197,6 +198,16 @@ class Bead:
 			tmp += ' '.join([str(item) for item in rule.alignment]) 
 			tmp += '\t\t......\t\t' + str(rule.square) + '\n'
 		tmp += '\n'
+		# glue rules
+		if self.s2t:
+			tmp += str(len(self.glueRuleList)) + ' glue rules in the Bead:\n'
+			for rule in self.glueRuleList:
+				tmp += rule.lhsSrc + ' | ' + rule.lhsTgt + ' -> '
+				tmp += ' '.join(rule.rhsSrc) + ' | '
+				tmp += ' '.join(rule.rhsTgt) + ' | '
+				tmp += ' '.join([str(item) for item in rule.alignment]) 
+				tmp += '\t\t......\t\t' + str(rule.square) + '\n'
+			tmp += '\n'
 
 		return tmp.encode('utf-8')
 
@@ -268,44 +279,67 @@ class Bead:
 			if square[0] != i:
 				for j in xrange(i, square[0]):
 					rhsSrc.append(j)
-					if not self.legalRule(rhsSrc + ['placeHolder'], ['placeHolder']): return False   # prune out illegal rules early
+					isGlueR = self.legalGlueRule(rhsSrc, [])
+					isLegalR = self.legalRule(rhsSrc + ['placeHolder'], ['placeHolder'])
+					if not s2t and not isLegalR: return 'illegalRule', None				 # prune out illegal rules early 
+					if s2t and not isGlueR and not isLegalR: return 'illegalRule', None				
 
 			#if s2t: 
 				#rhsSrc.append(str(square[5]))
 			#else: 
 			rhsSrc.append('X')
 
-			if not self.legalRule(rhsSrc + ['placeHolder'], ['placeHolder']): return False
+			isGlueR = self.legalGlueRule(rhsSrc, [])
+			isLegalR = self.legalRule(rhsSrc + ['placeHolder'], ['placeHolder'])
+			if not s2t and not isLegalR: return 'illegalRule', None
+			if s2t and not isGlueR and not isLegalR: return 'illegalRule', None
+
 			i = square[2]
 		if key[2] != i:
 			for j in xrange(i, key[2]):
 				rhsSrc.append(j)
-				if not self.legalRule(rhsSrc + ['placeHolder'], ['placeHolder']): return False
+				isGlueR = self.legalGlueRule(rhsSrc, [])
+				isLegalR = self.legalRule(rhsSrc + ['placeHolder'], ['placeHolder'])
+				if not s2t and not isLegalR: return 'illegalRule', None
+				if s2t and not isGlueR and not isLegalR: return 'illegalRule', None
 
 		i = key[1]
 		for k, square in enumerate(sorted(subaList, key=lambda x: x[1])):
 			if square[1] != i:
 				for j in xrange(i, square[1]):
 					rhsTgt.append(j)
-					if not self.legalRule(['placeHolder'], rhsTgt + ['placeHolder']): return False
+					isGlueR = self.legalGlueRule([], rhsTgt)
+					isLegalR = self.legalRule(['placeHolder'], rhsTgt + ['placeHolder'])
+					if not s2t and not isLegalR: return 'illegalRule', None
+					if s2t and not isGlueR and not isLegalR: return 'illegalRule', None
 
 			if s2t: rhsTgt.append(str(square[5]))
 			else: rhsTgt.append('X')
 
-			if not self.legalRule(['placeHolder'], rhsTgt + ['placeHolder']): return False
+			isGlueR = self.legalGlueRule([], rhsTgt)
+			isLegalR = self.legalRule(['placeHolder'], rhsTgt + ['placeHolder'])
+			if not s2t and not isLegalR: return 'illegalRule', None
+			if s2t and not isGlueR and not isLegalR: return 'illegalRule', None
 			align.append((subaList.index(square), k))
 			i = square[3]
 		if key[3] != i:
 			for j in xrange(i, key[3]):
 				rhsTgt.append(j)
-				if not self.legalRule(['placeHolder'], rhsTgt + ['placeHolder']): return False
+				isGlueR = self.legalGlueRule([], rhsTgt)
+				isLegalR = self.legalRule(['placeHolder'], rhsTgt + ['placeHolder'])
+				if not s2t and not isLegalR: return 'illegalRule', None
+				if s2t and not isGlueR and not isLegalR: return 'illegalRule', None
 
-		tmpRule = Rule(lhsSrc, lhsTgt, rhsSrc, rhsTgt, align, self.wordAlignment, self.srcSnt, self.tgtSnt, key)
-		#if self.verbose: print >> debug_log, tmpRule, '\t\t',
+		if s2t and self.legalGlueRule(rhsSrc, rhsTgt):
+			tmpRule = Rule(lhsSrc, lhsTgt, rhsSrc, rhsTgt, align, self.wordAlignment, self.srcSnt, self.tgtSnt, key)
+			return ('glueRule', tmpRule)
+			#if self.verbose: print >> debug_log, tmpRule, '\t\t',
 		if self.legalRule(rhsSrc, rhsTgt):
-			return tmpRule   
+			tmpRule = Rule(lhsSrc, lhsTgt, rhsSrc, rhsTgt, align, self.wordAlignment, self.srcSnt, self.tgtSnt, key)
+			#if self.verbose: print >> debug_log, tmpRule, '\t\t',
+			return ('regularRule', tmpRule)   
 		else:
-			return False
+			return ('illegalRule', None) 
 
 	def _extractRules_(self, wordRulesFlag, extensiveRulesFlag, phraseRulesFlag, s2t):
 		"""
@@ -317,12 +351,16 @@ class Bead:
 
 		"""
 		ruleList = []
+		if s2t: glueRuleList = []
 		# add in rules with non-terminal Xs
 		for key in self.subtreeAlignmentDic:
 			for subaList in util.allCombinations(self.subtreeAlignmentDic[key]):
 				#if self.verbose: print >> debug_log, key, ':', subaList
-				tmpRule = self._extract_(key, subaList, s2t)
-				if tmpRule: ruleList.append(tmpRule)
+				ruleType, tmpRule = self._extract_(key, subaList, s2t)
+				if s2t and ruleType == 'glueRule':
+					glueRuleList.append(tmpRule)
+				elif ruleType == 'regularRule':
+					ruleList.append(tmpRule)
 
 		# add in phrase pairs as rules
 		# add in rules with no non-terminal Xs, i.e. rules that are phrase pairs (only phrase pairs that satisfy the tree structures)
@@ -381,7 +419,21 @@ class Bead:
 					tmpRuleList.append(tmpRule)
 			ruleList.extend(tmpRuleList)
 
-		return ruleList
+		if s2t: return ruleList, glueRuleList
+		else: return ruleList, None
+
+
+	def legalGlueRule(self, rhsSrc, rhsTgt):
+		'''
+		If both rhsSrc and rhsTgt contain only non-terminals, return True 
+		otherwise, return False
+		'''
+		numXSrc = len([ele for ele in rhsSrc if isinstance(ele, str)])
+		numXTgt = len([ele for ele in rhsTgt if isinstance(ele, str)])
+		if numXSrc == len(rhsSrc) and numXTgt == len(rhsTgt):
+			return True
+		else:
+			return False
 
 	def legalRule(self, rhsSrc, rhsTgt):
 		'''

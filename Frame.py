@@ -228,6 +228,7 @@ class SntFrame:
 			print >> debug_log
 
 		self.ruleList = []
+		if s2t: self.glueRuleList = []
 		if ruleExFlag:
 			tmpSubaList = [frame.subtreeAlignment_waMatrixPos for frame in self.frameList]
 
@@ -247,12 +248,19 @@ class SntFrame:
 				print >> debug_log
 
 			self.ruleList = [rule.mosesFormatRule() for rule in self.consolidateRules(tmpBead.ruleList, fractionalCountFlag) if rule.count > 0]
+			if s2t: self.glueRuleList = [rule.mosesFormatRule() for rule in tmpBead.glueRuleList]
 
 		if verbose:
 			print >> debug_log, "SntFrame got the following rules: (" + str(len(self.ruleList)) + ")"
 			for rule in self.ruleList:
 				print >> debug_log, ''.join(rule[0]).encode('utf-8'),
 			print >> debug_log
+			
+			if s2t:
+				print >> debug_log, "SntFrame got the following glue rules: (" + str(len(self.glueRuleList)) + ")"
+				for rule in self.glueRuleList:
+					print >> debug_log, ''.join(rule[0]).encode('utf-8'),
+				print >> debug_log
 	
 	"""
 	# old version return a list
@@ -557,6 +565,7 @@ def loadData(srcTrList, tgtTrList, waList, alignFunc, ruleExFlag, wordRulesFlag,
 			os.mkdir('/dev/shm/hacept')
 		f1 = codecs.open('/dev/shm/hacept/rule.' + str(procID), 'w', 'utf-8')
 		f2 = codecs.open('/dev/shm/hacept/ruleInv.' + str(procID), 'w', 'utf-8')
+		gf1 = codecs.open('/dev/shm/hacept/glueRule.' + str(procID), 'w', 'utf-8')
 	else:
 		result = []
 
@@ -576,6 +585,10 @@ def loadData(srcTrList, tgtTrList, waList, alignFunc, ruleExFlag, wordRulesFlag,
 					#r, rinv = rule.mosesFormatRule()
 					f1.write(r)
 					f2.write(rinv)
+				if s2t:
+					for rule in tmpSntFrame.glueRuleList:
+						r, rinv = rule[0], rule[1]
+						gf1.write(r)
 		else:
 			if len(srcTr.leaves()) == 0 or len(tgtTr.leaves()) == 0:
 				result.append(None)
@@ -623,10 +636,17 @@ def loadDataParallelWrapper(srctrFilename, tgttrFilename, waFilename, numProc, a
 			os.remove('/dev/shm/hacept/rule.all')
 		if 'ruleInv.all' in os.listdir('/dev/shm/hacept/'):
 			os.remove('/dev/shm/hacept/ruleInv.all')
+
+		if s2t:
+			if 'glueRule.all' in os.listdir('/dev/shm/hacept/'):
+				os.remove('/dev/shm/hacept/glueRule.all')
+
 		import subprocess
 		for i in xrange(1, numProc + 1):
 			subprocess.call("cat %s >> %s" % ('/dev/shm/hacept/rule.' + str(i), '/dev/shm/hacept/rule.all'), shell = True)
 			subprocess.call("cat %s >> %s" % ('/dev/shm/hacept/ruleInv.' + str(i), '/dev/shm/hacept/ruleInv.all'), shell = True)
+			if s2t:
+				subprocess.call("cat %s >> %s" % ('/dev/shm/hacept/glueRule.' + str(i), '/dev/shm/hacept/glueRule.all'), shell = True)
 	return sntList 
 
 if __name__ == "__main__":

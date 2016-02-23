@@ -11,6 +11,7 @@ from Bead import Bead
 from corpusCount import corpusCount
 import time
 import re
+from nltk import FreqDist 
 
 debug_log = sys.stderr
 out = sys.stdout
@@ -117,11 +118,17 @@ def main():
 		print >> out, 'outputing extracted rules in moses format ...'
 		s = time.clock()
 		ans, ans1 = [], []
+		if args.s2t: gans = []
 		if args.minMemFlag:
 			for rule in codecs.open('/dev/shm/hacept/rule.all', 'r', 'utf-8').read().split('\n')[:-1]:
 				ans.append(rule + '\n')
 			for rule in codecs.open('/dev/shm/hacept/ruleInv.all', 'r', 'utf-8').read().split('\n')[:-1]:
 				ans1.append(rule + '\n')
+			if args.s2t:
+				gans = []
+				for rule in codecs.open('/dev/shm/hacept/glueRule.all', 'r', 'utf-8').read().split('\n')[:-1]:
+					gans.append(rule + '\n')
+
 		else:
 			for sntFrame in alignedSntFrameList:
 				#pdb.set_trace()
@@ -133,6 +140,11 @@ def main():
 					#ruleNInv, ruleInv = rule.mosesFormatRule()
 					ans.append(ruleNInv)
 					ans1.append(ruleInv)
+
+				if args.s2t:
+					for rule in sntFrame.glueRuleList:
+						ruleNInv, ruleInv = rule[0], rule[1] 
+						gans.append(ruleNInv)
 
 		if args.corpusCnt:
 			print >> out, 'corpus count ...\n'
@@ -163,16 +175,32 @@ def main():
 			ans1[i] = re.sub('-at-', '@', a)
 			
 		ans.sort(); ans1.sort()
+		if args.s2t: 
+			gansDict = FreqDist(gans)
+			gans = []
+			for key in gansDict: 
+				a = key.split('|||')
+				a.insert(2, ' 1 ')
+				a[-1] = str(gansDict[key]) + '\n'
+				a = ' ||| '.join(a)
+				gans.append(a)
+			gans.sort()
 		print >> out, 'sorting rules / inversed rules time: ', time.clock() - s
 
 		s = time.clock()
 		outf = codecs.open(os.path.join('/dev/shm/', args.stem+'.exRules'), 'w', 'utf-8')
 		outf1 = codecs.open(os.path.join('/dev/shm/', args.stem+'.inv.exRules'), 'w', 'utf-8')
+		if args.s2t:
+			goutf = codecs.open(os.path.join('/dev/shm/', args.stem+'.glueRules'), 'w', 'utf-8')
 		#outf = codecs.open(os.path.join(args.temp_dir, args.stem+'.exRules'), 'w', 'utf-8')
 		#outf1 = codecs.open(os.path.join(args.temp_dir, args.stem+'.inv.exRules'), 'w', 'utf-8')
 		for a in ans: outf.write(a)
 		for a in ans1: outf1.write(a)
 		outf.close(); outf1.close()
+		if args.s2t: 
+			for a in gans: goutf.write(a)
+			goutf.close()
+
 		print >> out, 'output all rules time: ', time.clock() - s
 	
 	# if build lexical translation tables
