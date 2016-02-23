@@ -10,7 +10,7 @@ from extractPP import extractMinPhrasePairs
 debug_log = sys.stderr
 
 class Bead:
-	def __init__(self, srcTree, tgtTree, wordAlignment, subtreeAlignment, wordRulesFlag, extensiveRulesFlag, phraseRulesFlag, verbose):
+	def __init__(self, srcTree, tgtTree, wordAlignment, subtreeAlignment, wordRulesFlag, extensiveRulesFlag, phraseRulesFlag, s2t, verbose):
 		"""
 		Initialize a Bead instance.
 		
@@ -52,7 +52,7 @@ class Bead:
 		
 		#pdb.set_trace()
 		self.subtreeAlignmentDic = self._level_(self.subtreeAlignment)
-		self.ruleList = self._extractRules_(wordRulesFlag, extensiveRulesFlag, phraseRulesFlag)
+		self.ruleList = self._extractRules_(wordRulesFlag, extensiveRulesFlag, phraseRulesFlag, s2t)
 
 	@classmethod
 	def loadData(cls, filename):
@@ -189,14 +189,16 @@ class Bead:
 		# rules
 		tmp += str(len(self.ruleList)) + ' rules in the Bead:\n'
 		for rule in self.ruleList:
-			tmp += rule.lhs + ' -> '
-			tmp += ' '.join([item.encode('utf-8') for item in rule.rhsSrc]) + ' | ' 
-			tmp += ' '.join([item.encode('utf-8') for item in rule.rhsTgt]) + ' | ' 
+			tmp += rule.lhsSrc + ' | ' + rule.lhsTgt + ' -> '
+			tmp += ' '.join(rule.rhsSrc) + ' | '
+			tmp += ' '.join(rule.rhsTgt) + ' | '
+			#tmp += ' '.join([item.encode('utf-8') for item in rule.rhsSrc]) + ' | ' 
+			#tmp += ' '.join([item.encode('utf-8') for item in rule.rhsTgt]) + ' | ' 
 			tmp += ' '.join([str(item) for item in rule.alignment]) 
 			tmp += '\t\t......\t\t' + str(rule.square) + '\n'
 		tmp += '\n'
 
-		return tmp
+		return tmp.encode('utf-8')
 
 	@classmethod
 	def _level_(cls, subtreeAlignment):
@@ -252,9 +254,12 @@ class Bead:
 		else:
 			return False
 
-	def _extract_(self, key, subaList):
+	def _extract_(self, key, subaList, s2t):
 		subaList.sort()
-		lhs = 'X'
+		if s2t:
+			lhsSrc, lhsTgt = 'X', key[5]
+		else:
+			lhsSrc, lhsTgt = 'X', 'X'
 		rhsSrc, rhsTgt, align = [], [], []
 
 		#pdb.set_trace()
@@ -264,7 +269,12 @@ class Bead:
 				for j in xrange(i, square[0]):
 					rhsSrc.append(j)
 					if not self.legalRule(rhsSrc + ['placeHolder'], ['placeHolder']): return False   # prune out illegal rules early
+
+			#if s2t: 
+				#rhsSrc.append(str(square[5]))
+			#else: 
 			rhsSrc.append('X')
+
 			if not self.legalRule(rhsSrc + ['placeHolder'], ['placeHolder']): return False
 			i = square[2]
 		if key[2] != i:
@@ -278,7 +288,10 @@ class Bead:
 				for j in xrange(i, square[1]):
 					rhsTgt.append(j)
 					if not self.legalRule(['placeHolder'], rhsTgt + ['placeHolder']): return False
-			rhsTgt.append('X')
+
+			if s2t: rhsTgt.append(str(square[5]))
+			else: rhsTgt.append('X')
+
 			if not self.legalRule(['placeHolder'], rhsTgt + ['placeHolder']): return False
 			align.append((subaList.index(square), k))
 			i = square[3]
@@ -287,14 +300,14 @@ class Bead:
 				rhsTgt.append(j)
 				if not self.legalRule(['placeHolder'], rhsTgt + ['placeHolder']): return False
 
-		tmpRule = Rule(lhs, rhsSrc, rhsTgt, align, self.wordAlignment, self.srcSnt, self.tgtSnt, key)
+		tmpRule = Rule(lhsSrc, lhsTgt, rhsSrc, rhsTgt, align, self.wordAlignment, self.srcSnt, self.tgtSnt, key)
 		#if self.verbose: print >> debug_log, tmpRule, '\t\t',
 		if self.legalRule(rhsSrc, rhsTgt):
 			return tmpRule   
 		else:
 			return False
 
-	def _extractRules_(self, wordRulesFlag, extensiveRulesFlag, phraseRulesFlag):
+	def _extractRules_(self, wordRulesFlag, extensiveRulesFlag, phraseRulesFlag, s2t):
 		"""
 		Return a list of rules extracted from this bead.
 
@@ -308,7 +321,7 @@ class Bead:
 		for key in self.subtreeAlignmentDic:
 			for subaList in util.allCombinations(self.subtreeAlignmentDic[key]):
 				#if self.verbose: print >> debug_log, key, ':', subaList
-				tmpRule = self._extract_(key, subaList)
+				tmpRule = self._extract_(key, subaList, s2t)
 				if tmpRule: ruleList.append(tmpRule)
 
 		# add in phrase pairs as rules
@@ -316,15 +329,18 @@ class Bead:
 		squareList = [suba for lis in self.subtreeAlignment for suba in lis]
 		# if phraseRulesFlag, add in all phrase pairs, including the ones that don't satisfy the tree structures
 		if phraseRulesFlag:
-			squareList += extractMinPhrasePairs(self.wordAlignment)
+			squareListWOtags = [suba[:4] for suba in squareList]  # make sure no duplicated squares are added
+			tmp = extractMinPhrasePairs(self.wordAlignment)
+			squareList += [suba for suba in tmp if suba[:4] not in squareListWOtags]
 		#pdb.set_trace()
 		for square in squareList: 
-			lhs = 'X'
+			if s2t: lhsSrc, lhsTgt = 'X', square[5]
+			else: lhsSrc, lhsTgt = 'X', 'X'
 			rhsSrc = range(square[0], square[2])
 			rhsTgt = range(square[1], square[3])
 			align = []
 			if self.legalRule(rhsSrc, rhsTgt):
-				tmpRule = Rule(lhs, rhsSrc, rhsTgt, align, self.wordAlignment, self.srcSnt, self.tgtSnt, square)
+				tmpRule = Rule(lhsSrc, lhsTgt, rhsSrc, rhsTgt, align, self.wordAlignment, self.srcSnt, self.tgtSnt, square)
 				#if self.verbose: print >> debug_log, tmpRule, '\t\t',
 				ruleList.append(tmpRule)
 
@@ -333,7 +349,7 @@ class Bead:
 			#print >> debug_log, "Bead got wordRulesFlag:", str(wordRulesFlag)
 		if not wordRulesFlag and not phraseRulesFlag:
 			#if self.verbose: print >> debug_log, "wordRules are:"
-			lhs = 'X'
+			lhsSrc, lhsTgt = 'X', 'X'
 			rhsSrc, rhsTgt, align = [], [], []   # here align is for the alignment of Xs, not word alignment, so keep empty 
 			for i in xrange(len(self.wordAlignment)):
 				for j in xrange(len(self.wordAlignment[0])):
@@ -343,7 +359,7 @@ class Bead:
 							#if self.verbose: print >> debug_log, i, j, self.srcSnt[i].encode('utf-8'), self.tgtSnt[j].encode('utf-8')
 							if self.legalRule(rhsSrc, rhsTgt):
 								#if self.verbose: print >> debug_log, "legal"
-								tmpRule = Rule(lhs, rhsSrc, rhsTgt, align, self.wordAlignment, self.srcSnt, self.tgtSnt, (i, j, i + 1, j + 1))
+								tmpRule = Rule(lhsSrc, lhsTgt, rhsSrc, rhsTgt, align, self.wordAlignment, self.srcSnt, self.tgtSnt, (i, j, i + 1, j + 1))
 								ruleList.append(tmpRule)
 						break
 
@@ -356,8 +372,8 @@ class Bead:
 			for rule in ruleList:
 				if len(rule.rhsTgt) > 1 and rule.rhsTgt[0] in ["a", "the"]:
 						#and 0 not in [align[1] for align in rule.alignment]:
-					tmpRule = Rule(None, None, None, None, None, None, None, None)
-					tmpRule.lhs, tmpRule.rhsSrc, tmpRule.rhsTgt = rule.lhs, rule.rhsSrc, rule.rhsTgt[1:]
+					tmpRule = Rule(None, None, None, None, None, None, None, None, None)
+					tmpRule.lhsSrc, tmpRule.lhsTgt, tmpRule.rhsSrc, tmpRule.rhsTgt = rule.lhsSrc, rule.lhsTgt, rule.rhsSrc, rule.rhsTgt[1:]
 					#tmpRule.alignment = [(align[0], align[1] - 1) for align in rule.alignment]
 					tmpRule.alignment = [(align[0], align[1] - 1) for align in rule.alignment if align[1] > 0]
 					#print tmpRule.alignment
@@ -377,8 +393,9 @@ class Bead:
 		return True
 		otherwise, return False
 		'''
-		numXSrc = rhsSrc.count('X')
-		numXTgt = rhsTgt.count('X')
+		numXSrc = len([ele for ele in rhsSrc if isinstance(ele, str) and ele != 'placeHolder'])
+		numXTgt = len([ele for ele in rhsTgt if isinstance(ele, str) and ele != 'placeHolder'])
+		#print 'koala!!!', rhsSrc, rhsTgt
 		if numXSrc > 2 or numXTgt > 2:
 			#if self.verbose: print >> debug_log, "illegal: more than 2 Xs",
 			return False
@@ -388,28 +405,29 @@ class Bead:
 		if len(rhsSrc) - numXSrc < 1 or len(rhsTgt) - numXTgt < 1:
 					#if self.verbose: print >> debug_log, "illegal: less than 1 terminal",
 					return False
-		if numXSrc == 2 and abs(rhsSrc.index('X') - (len(rhsSrc) - rhsSrc[::-1].index('X') - 1)) == 1:
-			#if self.verbose: print >> debug_log, "illegal: two Xs next to each other on rhsSrc",
-			return False
+		if numXSrc == 2:
+			Xpos = [i for i in xrange(len(rhsSrc)) if isinstance(rhsSrc[i], str)]
+			if abs(Xpos[0] - Xpos[1]) == 1:
+				#if self.verbose: print >> debug_log, "illegal: two Xs next to each other on rhsSrc",
+				return False
 
 		for i in rhsSrc:
-			if i != 'X' and i != 'placeHolder' and len(self.srcSnt[i]) > 40:
+			if (not isinstance(i, str)) and len(self.srcSnt[i]) > 40:
 				#if self.verbose: print >> debug_log, "illegal: src word longer than 40 characters",
 				return False
-			elif i != 'X' and i != 'placeHolder' and '|' in self.srcSnt[i]:
+			elif (not isinstance(i, str)) and '|' in self.srcSnt[i]:
 				#if self.verbose: print >> debug_log, "illegal: src side contains '|'",
 				return False
 
 		for i in rhsTgt:
-			if i != 'X' and i != 'placeHolder' and len(self.tgtSnt[i]) > 40:
+			if (not isinstance(i, str)) and len(self.tgtSnt[i]) > 40:
 				#if self.verbose: print >> debug_log, "illegal: tgt word longer than 40 characters",
 				return False
-			elif i != 'X' and i != 'placeHolder' and '|' in self.tgtSnt[i]:
+			elif (not isinstance(i, str)) and '|' in self.tgtSnt[i]:
 				#if self.verbose: print >> debug_log, "illegal: tgt side contains '|'",
 				return False
 
 		#if self.verbose: print >> debug_log, "legal",
-
 		return True
 
 

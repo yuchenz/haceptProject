@@ -56,6 +56,9 @@ def main():
 	arg_parser.add_argument('--phraseRulesFlag', action='store_true', help='turn on phrase rule extraction, \
 			i.e. add all phrase pairs including the ones not consistent with the tree structures', default=False)
 
+	arg_parser.add_argument('--s2t', action='store_true', help='turn on string-to-tree flag, extracting rules that \
+			can be used in string-to-tree decoding', default=False)
+
 	args = arg_parser.parse_args()
 
 	# files that need to be prepared in ahead
@@ -91,7 +94,8 @@ def main():
 	sntFrameList = align(os.path.join(args.temp_dir, compiled_data + lan1_suffix + bps_suffix), 
 			os.path.join(args.temp_dir, compiled_data + lan2_suffix + bps_suffix),
 			os.path.join(args.temp_dir, wa_file), args.align_func, args.num_proc, args.ex, args.wordRulesFlag, 
-			args.minMemFlag, args.verbose, args.extensiveRulesFlag, not args.noFractionalCount, args.phraseRulesFlag)
+			args.minMemFlag, args.verbose, args.extensiveRulesFlag, not args.noFractionalCount, 
+			args.phraseRulesFlag, args.s2t)
 	print >> out, 'sntFrameList size: ', len(sntFrameList)
 	print >> out, 'subtree alignment time: ', time.clock() - s
 

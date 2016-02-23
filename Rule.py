@@ -3,7 +3,7 @@
 import pdb
 
 class Rule:
-	def __init__(self, lhs, rhsSrc, rhsTgt, alignment, wordAlignment, srcSnt, tgtSnt, square):
+	def __init__(self, lhsSrc, lhsTgt, rhsSrc, rhsTgt, alignment, wordAlignment, srcSnt, tgtSnt, square):
 		"""
 		Initialize a SCFG rule.
 
@@ -31,12 +31,12 @@ class Rule:
 		:param tgtSnt: the list of words of target snt 
 
 		"""
-		if lhs == None:
-			self.lhs, self.rhsSrc, self.rhsTgt, self.alignment, self.square = None, None, None, None, None
+		if lhsSrc == None:
+			self.lhsSrc, self.lhsTgt, self.rhsSrc, self.rhsTgt, self.alignment, self.square = None, None, None, None, None, None
 		else:
-			self.lhs = lhs
-			self.rhsSrc = [srcSnt[i] if i != 'X' else 'X' for i in rhsSrc] 
-			self.rhsTgt = [tgtSnt[i] if i != 'X' else 'X' for i in rhsTgt] 
+			self.lhsSrc, self.lhsTgt = lhsSrc, lhsTgt
+			self.rhsSrc = [srcSnt[i] if (not isinstance(i, str)) else '['+i+']' for i in rhsSrc] 
+			self.rhsTgt = [tgtSnt[i] if (not isinstance(i, str)) else '['+i+']' for i in rhsTgt] 
 			#print self.rhsSrc, self.rhsTgt, alignment
 			self.alignment = self.setupAlignment(alignment, wordAlignment, rhsSrc, rhsTgt)
 			self.square = square
@@ -49,7 +49,7 @@ class Rule:
 		srcXDic, tgtXDic = {}, {}
 		k = 0
 		for i in xrange(len(rhsSrc)):
-			if rhsSrc[i] != 'X':
+			if not isinstance(rhsSrc[i], str):
 				for j in xrange(len(wordAlignment[rhsSrc[i]])):
 					if wordAlignment[rhsSrc[i]][j] == 1 and j in rhsTgt:
 						ans.append((i, rhsTgt.index(j)))
@@ -59,7 +59,7 @@ class Rule:
 
 		k = 0
 		for i in xrange(len(rhsTgt)):
-			if rhsTgt[i] == 'X':
+			if isinstance(rhsTgt[i], str):
 				tgtXDic[k] = i
 				k += 1
 
@@ -83,22 +83,18 @@ class Rule:
 		return tmp
 
 	def mosesFormatRule(self):
-		rhsS = []
-		for item in self.rhsSrc:
-			if item == 'X':
-				rhsS.append('[X][X]')
-			else:
-				rhsS.append(item)
+		rhsS = list(self.rhsSrc)
+		rhsT = list(self.rhsTgt)
 
-		rhsT = []
-		for item in self.rhsTgt:
-			if item == 'X':
-				rhsT.append('[X][X]')
-			else:
-				rhsT.append(item)
+		for item in self.alignment:
+			if rhsS[item[0]][0] == '[' and rhsS[item[0]][-1] == ']' and \
+					rhsT[item[1]][0] == '[' and rhsT[item[1]][-1] == ']':
+						tmp = rhsS[item[0]] + rhsT[item[1]]
+						rhsS[item[0]] = tmp
+						rhsT[item[1]] = tmp
 
-		rule = rhsS + ['[X]', '|||'] + rhsT + ['[X]', '|||']
-		ruleInv = rhsT + ['[X]', '|||'] + rhsS + ['[X]', '|||']
+		rule = rhsS + ['[' + self.lhsSrc + ']'] + ['|||'] + rhsT + ['[' + self.lhsTgt + ']'] + ['|||']
+		ruleInv = rhsT + ['[' + self.lhsTgt + ']'] + ['|||'] + rhsS + ['[' + self.lhsSrc + ']'] + ['|||']
 
 		for item in self.alignment:
 			rule.append(str(item[0])+'-'+str(item[1]))

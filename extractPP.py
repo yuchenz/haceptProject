@@ -25,7 +25,7 @@ def minimizeSquare(x1, y1, x2, y2, up, left):
 		else: break
 	
 	#print newX1, newY1, newX2, newY2
-	return tuple((newX1, newY1, newX2 + 1, newY2 + 1))
+	return tuple((newX1, newY1, newX2 + 1, newY2 + 1, 'X', 'X'))
 
 def extractMinPhrasePairs(wordAlignment, maxWordCnt = 5):
 	squareList = set([])

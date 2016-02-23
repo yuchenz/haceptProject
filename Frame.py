@@ -144,7 +144,7 @@ class Frame:
 					else:
 						print >> debug_log, tr
 				par = par.parent()
-			offsetList.append((cnt, cnt+len(tr[pos].leaves())))
+			offsetList.append((cnt, cnt+len(tr[pos].leaves()), tr[pos].node.split('-')[0]))
 			cnt = 0
 		return offsetList
 
@@ -169,10 +169,10 @@ class Frame:
 		:rvalue: (x1, y1, x2, y2) represents the subtree square on the word alignment matrix.
 
 		"""
-		x1, x2 = Frame.treeposition2offsetPosition([srcTrPos], srcTr)[0]
-		y1, y2 = Frame.treeposition2offsetPosition([tgtTrPos], tgtTr)[0]
+		x1, x2, xlabel = Frame.treeposition2offsetPosition([srcTrPos], srcTr)[0]
+		y1, y2, ylabel = Frame.treeposition2offsetPosition([tgtTrPos], tgtTr)[0]
 
-		return (x1, y1, x2, y2)
+		return (x1, y1, x2, y2, xlabel, ylabel)
 
 	def subtreeAlign(self, subtreeAlignFunc, srcTr, tgtTr):
 		"""
@@ -194,7 +194,7 @@ class Frame:
 		return ans
 
 class SntFrame:
-	def __init__(self, srcTree, tgtTree, wordAlignment, alignFunc, ruleExFlag, wordRulesFlag, extensiveRulesFlag, fractionalCountFlag, phraseRulesFlag, verbose): 
+	def __init__(self, srcTree, tgtTree, wordAlignment, alignFunc, ruleExFlag, wordRulesFlag, extensiveRulesFlag, fractionalCountFlag, phraseRulesFlag, s2t, verbose): 
 		"""
 		Initialize a FrameList instance.
 
@@ -238,7 +238,7 @@ class SntFrame:
 				print >> debug_log
 				print >> debug_log, "rules in the Bead:"
 
-			tmpBead = Bead(self.srcTree, self.tgtTree, self.waMatrix, tmpSubaList, wordRulesFlag, extensiveRulesFlag, phraseRulesFlag, verbose)
+			tmpBead = Bead(self.srcTree, self.tgtTree, self.waMatrix, tmpSubaList, wordRulesFlag, extensiveRulesFlag, phraseRulesFlag, s2t, verbose)
 
 			if verbose:
 				print >> debug_log
@@ -383,7 +383,7 @@ class SntFrame:
 			if not wordRulesFlag and subtree.height() <= 2:
 				continue
 			span = Frame.treeposition2offsetPosition([subtree.treeposition()], tree)[0] 
-			spanDict[(span[0], span[-1])] = subtree.treeposition()
+			spanDict[(span[0], span[1])] = subtree.treeposition()
 		return spanDict
 
 	def _consistentWithWA_(self, span, lan):
@@ -529,12 +529,12 @@ class SntFrame:
 		spanCount = {}
 		# compute number of rules per span
 		for rule in ruleList:
-			spanCount[rule.square] = spanCount.get(rule.square, 0) + 1
+			spanCount[rule.square[:4]] = spanCount.get(rule.square[:4], 0) + 1
 
 		# compute fractional counts
 		for rule in ruleList:
 			if fractionalCountFlag:
-				rule.count = 1.0 / spanCount[rule.square]
+				rule.count = 1.0 / spanCount[rule.square[:4]]
 			else:
 				rule.count = 1.0
 
@@ -551,7 +551,7 @@ class SntFrame:
 
 		return ruleList
 
-def loadData(srcTrList, tgtTrList, waList, alignFunc, ruleExFlag, wordRulesFlag, minMemFlag, procID, verbose, extensiveRulesFlag, fractionalCountFlag, phraseRulesFlag):
+def loadData(srcTrList, tgtTrList, waList, alignFunc, ruleExFlag, wordRulesFlag, minMemFlag, procID, verbose, extensiveRulesFlag, fractionalCountFlag, phraseRulesFlag, s2t):
 	if minMemFlag:
 		if 'hacept' not in os.listdir('/dev/shm'):
 			os.mkdir('/dev/shm/hacept')
@@ -570,7 +570,7 @@ def loadData(srcTrList, tgtTrList, waList, alignFunc, ruleExFlag, wordRulesFlag,
 			if len(srcTr.leaves()) == 0 or len(tgtTr.leaves()) == 0:
 				continue
 			else:
-				tmpSntFrame = SntFrame(srcTr, tgtTr, wa, alignFunc, ruleExFlag, wordRulesFlag, extensiveRulesFlag, fractionalCountFlag, phraseRulesFlag, verbose)
+				tmpSntFrame = SntFrame(srcTr, tgtTr, wa, alignFunc, ruleExFlag, wordRulesFlag, extensiveRulesFlag, fractionalCountFlag, phraseRulesFlag, s2t, verbose)
 				for rule in tmpSntFrame.ruleList:
 					r, rinv = rule[0], rule[1]
 					#r, rinv = rule.mosesFormatRule()
@@ -580,13 +580,13 @@ def loadData(srcTrList, tgtTrList, waList, alignFunc, ruleExFlag, wordRulesFlag,
 			if len(srcTr.leaves()) == 0 or len(tgtTr.leaves()) == 0:
 				result.append(None)
 			else:
-				tmpSntFrame = SntFrame(srcTr, tgtTr, wa, alignFunc, ruleExFlag, wordRulesFlag, extensiveRulesFlag, fractionalCountFlag, phraseRulesFlag, verbose)
+				tmpSntFrame = SntFrame(srcTr, tgtTr, wa, alignFunc, ruleExFlag, wordRulesFlag, extensiveRulesFlag, fractionalCountFlag, phraseRulesFlag, s2t, verbose)
 				result.append(tmpSntFrame)
 
 	if minMemFlag: return [None]
 	else: return result
 
-def loadDataParallelWrapper(srctrFilename, tgttrFilename, waFilename, numProc, alignFunc, ruleExFlag, wordRulesFlag, minMemFlag, verbose, extensiveRulesFlag, fractionalCountFlag, phraseRulesFlag):
+def loadDataParallelWrapper(srctrFilename, tgttrFilename, waFilename, numProc, alignFunc, ruleExFlag, wordRulesFlag, minMemFlag, verbose, extensiveRulesFlag, fractionalCountFlag, phraseRulesFlag, s2t):
 	s = time.clock()
 	#srcTreeList = [nltk.ParentedTree(re.sub(' \(\)', ' -lbr-)', re.sub(' \)\)', ' -rbr-)', line))) for line in codecs.open(srctrFilename, 'r', 'utf-8')]
 	srcTreeList = codecs.open(srctrFilename, 'r', 'utf-8').readlines()
@@ -611,12 +611,12 @@ def loadDataParallelWrapper(srctrFilename, tgttrFilename, waFilename, numProc, a
 		for i in xrange(1, numProc + 1):
 			start = base * (i - 1)
 			end = base * i if i < numProc else len(waList)
-			tmp.append(pool.apply_async(loadData, args=(srcTreeList[start:end], tgtTreeList[start:end], waList[start:end], alignFunc, ruleExFlag, wordRulesFlag, minMemFlag, i, verbose, extensiveRulesFlag, fractionalCountFlag, phraseRulesFlag)))
+			tmp.append(pool.apply_async(loadData, args=(srcTreeList[start:end], tgtTreeList[start:end], waList[start:end], alignFunc, ruleExFlag, wordRulesFlag, minMemFlag, i, verbose, extensiveRulesFlag, fractionalCountFlag, phraseRulesFlag, s2t)))
 
 		for t in tmp:
 			sntList.extend(t.get())
 	else:
-		sntList = loadData(srcTreeList, tgtTreeList, waList, alignFunc, ruleExFlag, wordRulesFlag, minMemFlag, 1, verbose, extensiveRulesFlag, fractionalCountFlag, phraseRulesFlag)
+		sntList = loadData(srcTreeList, tgtTreeList, waList, alignFunc, ruleExFlag, wordRulesFlag, minMemFlag, 1, verbose, extensiveRulesFlag, fractionalCountFlag, phraseRulesFlag, s2t)
 
 	if minMemFlag:
 		if 'rule.all' in os.listdir('/dev/shm/hacept/'):
