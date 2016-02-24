@@ -144,7 +144,22 @@ class Frame:
 					else:
 						print >> debug_log, tr
 				par = par.parent()
-			offsetList.append((cnt, cnt+len(tr[pos].leaves()), tr[pos].node.split('-')[0]))
+
+			label = ''
+			start = False
+			for char in tr[pos].node:
+				if not start:
+					if char not in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ': 
+						continue
+					else:
+						start = True
+						label += char
+				else:
+					if char not in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ': 
+						break
+					else:
+						label += char
+			offsetList.append((cnt, cnt+len(tr[pos].leaves()), label)) 
 			cnt = 0
 		return offsetList
 
