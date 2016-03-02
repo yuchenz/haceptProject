@@ -8,6 +8,7 @@ import multiprocessing as mp
 import os
 import time
 from Bead import Bead
+from glueRules import extractLabels
 
 MAX=int(10e5)
 MIN=int(-10e5)
@@ -226,6 +227,7 @@ class SntFrame:
 		self.srcTree = srcTree
 		self.srcWordList = [word.lower() for word in srcTree.leaves()]
 		self.tgtTree = tgtTree
+		self.basicGlueRuleTopLabels, self.basicGlueRuleLabels = extractLabels(self.tgtTree)
 		self.tgtWordList = [word.lower() for word in tgtTree.leaves()]
 		self.waMatrix = self._makeWaMatrix_(wordAlignment, len(srcTree.leaves()), len(tgtTree.leaves()))
 
@@ -574,7 +576,7 @@ class SntFrame:
 
 		return ruleList
 
-def loadData(srcTrList, tgtTrList, waList, alignFunc, ruleExFlag, wordRulesFlag, minMemFlag, procID, verbose, extensiveRulesFlag, fractionalCountFlag, phraseRulesFlag, s2t):
+def loadData(srcTrList, tgtTrList, waList, alignFunc, ruleExFlag, wordRulesFlag, minMemFlag, procID, verbose, extensiveRulesFlag, fractionalCountFlag, phraseRulesFlag, s2t): 
 	if minMemFlag:
 		if 'hacept' not in os.listdir('/dev/shm'):
 			os.mkdir('/dev/shm/hacept')
@@ -583,6 +585,8 @@ def loadData(srcTrList, tgtTrList, waList, alignFunc, ruleExFlag, wordRulesFlag,
 		gf1 = codecs.open('/dev/shm/hacept/glueRule.' + str(procID), 'w', 'utf-8')
 	else:
 		result = []
+	
+	if s2t: basicGlueRuleTopLabels, basicGlueRuleLabels = set([]), set([])
 
 	for i in xrange(len(waList)):
 		srcTr = nltk.ParentedTree(srcTrList[i])
@@ -611,8 +615,12 @@ def loadData(srcTrList, tgtTrList, waList, alignFunc, ruleExFlag, wordRulesFlag,
 				tmpSntFrame = SntFrame(srcTr, tgtTr, wa, alignFunc, ruleExFlag, wordRulesFlag, extensiveRulesFlag, fractionalCountFlag, phraseRulesFlag, s2t, verbose)
 				result.append(tmpSntFrame)
 
-	if minMemFlag: return [None]
-	else: return result
+		if s2t: 
+			basicGlueRuleTopLabels.update(tmpSntFrame.basicGlueRuleTopLabels)
+			basicGlueRuleLabels.update(tmpSntFrame.basicGlueRuleLabels)
+
+	if minMemFlag: return [None], basicGlueRuleTopLabels, basicGlueRuleLabels
+	else: return result, basicGlueRuleTopLabels, basicGlueRuleLabels
 
 def loadDataParallelWrapper(srctrFilename, tgttrFilename, waFilename, numProc, alignFunc, ruleExFlag, wordRulesFlag, minMemFlag, verbose, extensiveRulesFlag, fractionalCountFlag, phraseRulesFlag, s2t):
 	s = time.clock()
@@ -631,6 +639,8 @@ def loadDataParallelWrapper(srctrFilename, tgttrFilename, waFilename, numProc, a
 	assert(len(srcTreeList) == len(tgtTreeList))
 	assert(len(srcTreeList) == len(waList))
 
+	basicGlueRuleTopLabels, basicGlueRuleLabels = [], [] 
+
 	if numProc > 1:
 		pool = mp.Pool(processes = numProc)
 		sntList = []
@@ -642,9 +652,17 @@ def loadDataParallelWrapper(srctrFilename, tgttrFilename, waFilename, numProc, a
 			tmp.append(pool.apply_async(loadData, args=(srcTreeList[start:end], tgtTreeList[start:end], waList[start:end], alignFunc, ruleExFlag, wordRulesFlag, minMemFlag, i, verbose, extensiveRulesFlag, fractionalCountFlag, phraseRulesFlag, s2t)))
 
 		for t in tmp:
-			sntList.extend(t.get())
+			ans, tmp1, tmp2 = t.get()
+			sntList.extend(ans)
+			basicGlueRuleTopLabels.append(tmp1)
+			basicGlueRuleLabels.append(tmp2)
+		
+		basicGlueRuleTopLabels = list(set([rule for proc in basicGlueRuleTopLabels for rule in list(proc)]))
+		basicGlueRuleLabels = list(set([rule for proc in basicGlueRuleLabels for rule in list(proc)]))
+
 	else:
-		sntList = loadData(srcTreeList, tgtTreeList, waList, alignFunc, ruleExFlag, wordRulesFlag, minMemFlag, 1, verbose, extensiveRulesFlag, fractionalCountFlag, phraseRulesFlag, s2t)
+		sntList, tmp1, tmp2 = loadData(srcTreeList, tgtTreeList, waList, alignFunc, ruleExFlag, wordRulesFlag, minMemFlag, 1, verbose, extensiveRulesFlag, fractionalCountFlag, phraseRulesFlag, s2t)
+		basicGlueRuleTopLabels, basicGlueRuleLabels = list(tmp1), list(tmp2)
 
 	if minMemFlag:
 		if 'rule.all' in os.listdir('/dev/shm/hacept/'):
@@ -662,7 +680,8 @@ def loadDataParallelWrapper(srctrFilename, tgttrFilename, waFilename, numProc, a
 			subprocess.call("cat %s >> %s" % ('/dev/shm/hacept/ruleInv.' + str(i), '/dev/shm/hacept/ruleInv.all'), shell = True)
 			if s2t:
 				subprocess.call("cat %s >> %s" % ('/dev/shm/hacept/glueRule.' + str(i), '/dev/shm/hacept/glueRule.all'), shell = True)
-	return sntList 
+
+	return sntList, basicGlueRuleTopLabels, basicGlueRuleLabels 
 
 if __name__ == "__main__":
 	"""

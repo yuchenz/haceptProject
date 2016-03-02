@@ -12,6 +12,7 @@ from corpusCount import corpusCount
 import time
 import re
 from nltk import FreqDist 
+from glueRules import generateBasicGlueRules
 
 debug_log = sys.stderr
 out = sys.stdout
@@ -92,7 +93,7 @@ def main():
 	# step 4: subtree alignment w/ frame extraction & rule extraction if turned on
 	print >> out, 'subtree alignment w/ frame extraction ...'
 	s = time.clock()
-	sntFrameList = align(os.path.join(args.temp_dir, compiled_data + lan1_suffix + bps_suffix), 
+	sntFrameList, basicGlueRuleTopLabels, basicGlueRuleLabels = align(os.path.join(args.temp_dir, compiled_data + lan1_suffix + bps_suffix), 
 			os.path.join(args.temp_dir, compiled_data + lan2_suffix + bps_suffix),
 			os.path.join(args.temp_dir, wa_file), args.align_func, args.num_proc, args.ex, args.wordRulesFlag, 
 			args.minMemFlag, args.verbose, args.extensiveRulesFlag, not args.noFractionalCount, 
@@ -145,6 +146,9 @@ def main():
 					for rule in sntFrame.glueRuleList:
 						ruleNInv, ruleInv = rule[0], rule[1] 
 						gans.append(ruleNInv)
+		
+		if args.s2t:
+			bgans = generateBasicGlueRules(basicGlueRuleTopLabels, basicGlueRuleLabels, args.verbose)
 
 		if args.corpusCnt:
 			print >> out, 'corpus count ...\n'
@@ -184,22 +188,24 @@ def main():
 				a[-1] = str(gansDict[key]) + '\n'
 				a = ' ||| '.join(a)
 				gans.append(a)
-			gans.sort()
+			gans.sort(); bgans.sort()
 		print >> out, 'sorting rules / inversed rules time: ', time.clock() - s
 
 		s = time.clock()
 		outf = codecs.open(os.path.join('/dev/shm/', args.stem+'.exRules'), 'w', 'utf-8')
 		outf1 = codecs.open(os.path.join('/dev/shm/', args.stem+'.inv.exRules'), 'w', 'utf-8')
-		if args.s2t:
-			goutf = codecs.open(os.path.join('/dev/shm/', args.stem+'.glueRules'), 'w', 'utf-8')
 		#outf = codecs.open(os.path.join(args.temp_dir, args.stem+'.exRules'), 'w', 'utf-8')
 		#outf1 = codecs.open(os.path.join(args.temp_dir, args.stem+'.inv.exRules'), 'w', 'utf-8')
 		for a in ans: outf.write(a)
 		for a in ans1: outf1.write(a)
 		outf.close(); outf1.close()
 		if args.s2t: 
+			goutf = codecs.open(os.path.join('/dev/shm/', args.stem+'.glueRules'), 'w', 'utf-8')
 			for a in gans: goutf.write(a)
 			goutf.close()
+			bgoutf = codecs.open(os.path.join('/dev/shm/', args.stem + '.basicGlueRules'), 'w', 'utf-8')
+			for a in bgans: bgoutf.write(a)
+			bgoutf.close()
 
 		print >> out, 'output all rules time: ', time.clock() - s
 	
