@@ -330,7 +330,7 @@ class Bead:
 				if not s2t and not isLegalR: return 'illegalRule', None
 				if s2t and not isGlueR and not isLegalR: return 'illegalRule', None
 
-		if s2t and self.legalGlueRule(rhsSrc, rhsTgt):
+		if s2t and self.legalGlueRule(rhsSrc, rhsTgt, align):
 			tmpRule = Rule(lhsSrc, lhsTgt, rhsSrc, rhsTgt, align, self.wordAlignment, self.srcSnt, self.tgtSnt, key)
 			return ('glueRule', tmpRule)
 			#if self.verbose: print >> debug_log, tmpRule, '\t\t',
@@ -423,11 +423,16 @@ class Bead:
 		else: return ruleList, None
 
 
-	def legalGlueRule(self, rhsSrc, rhsTgt):
+	def legalGlueRule(self, rhsSrc, rhsTgt, align=[]):
 		'''
 		If both rhsSrc and rhsTgt contain only non-terminals, return True 
 		otherwise, return False
 		'''
+		first = [item[0] for item in align]
+		second = [item[1] for item in align]
+		if len(set(first)) != len(first) or len(set(second)) != len(second):
+			return False
+
 		numXSrc = len([ele for ele in rhsSrc if isinstance(ele, str)])
 		numXTgt = len([ele for ele in rhsTgt if isinstance(ele, str)])
 		if numXSrc == len(rhsSrc) and numXTgt == len(rhsTgt):

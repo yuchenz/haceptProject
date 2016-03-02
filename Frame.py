@@ -586,7 +586,7 @@ def loadData(srcTrList, tgtTrList, waList, alignFunc, ruleExFlag, wordRulesFlag,
 	else:
 		result = []
 	
-	if s2t: basicGlueRuleTopLabels, basicGlueRuleLabels = set([]), set([])
+	basicGlueRuleTopLabels, basicGlueRuleLabels = set([]), set([])
 
 	for i in xrange(len(waList)):
 		srcTr = nltk.ParentedTree(srcTrList[i])
@@ -680,7 +680,7 @@ def loadDataParallelWrapper(srctrFilename, tgttrFilename, waFilename, numProc, a
 			subprocess.call("cat %s >> %s" % ('/dev/shm/hacept/ruleInv.' + str(i), '/dev/shm/hacept/ruleInv.all'), shell = True)
 			if s2t:
 				subprocess.call("cat %s >> %s" % ('/dev/shm/hacept/glueRule.' + str(i), '/dev/shm/hacept/glueRule.all'), shell = True)
-
+	
 	return sntList, basicGlueRuleTopLabels, basicGlueRuleLabels 
 
 if __name__ == "__main__":
