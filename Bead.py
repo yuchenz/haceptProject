@@ -158,7 +158,7 @@ class Bead:
 				i += 1
 					
 			if not errFlag:
-				beadList.append(cls(srcTree, tgtTree, wordAlignment, subtreeAlignment))
+				beadList.append(cls(srcTree, tgtTree, wordAlignment, subtreeAlignment, False, False, False, False, False))
 			srcTree, tgtTree, wordAlignment, subtreeAlignment = None, None, None, []
 
 		return beadList

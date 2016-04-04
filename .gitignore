@@ -3,3 +3,10 @@
 .*.swp
 nohup.out
 *.log
+*.feat*
+*.ch*
+*.en*
+*.mallet*
+*.gizawa*
+*.gsuba*
+*.gwa*
