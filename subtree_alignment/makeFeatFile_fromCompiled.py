@@ -22,11 +22,15 @@ def makeData(srcF, tgtF, srcTF, tgtTF, waF, gsubaF):
 				oneline2waMatrix(wa[i], len(srcSnt[i].split()), len(tgtSnt[i].split())), oneline2subaList(gsuba[i])))
 
 	trainExamples = []
+	f = codecs.open('koala.suba', 'w', 'utf-8')
 	for bead in beadList:
 		for suba in bead.otherSuba:
 			trainExamples.append((features(bead, suba), False))   # add negative training examples
+			f.write(suba.__str__()+' ')
 		for suba in bead.goldSuba:
 			trainExamples.append((features(bead, suba), True))    # add positive training examples
+			f.write(suba.__str__()+' ')
+		f.write('\n')
 	
 	return trainExamples
 

@@ -128,6 +128,8 @@ def extractAllSuba(srcTree, tgtTree, wa):
 
 			#print >> sys.stderr, tSubtr.pprint().encode('utf-8')
 
+			# if -1 in sDic[sTreePos] or -1 in tDic[tTreePos][0], it means that either sSubtr or tSubtr doesn't have any word alignments
+			# we don't alignment two subtrees that have zero word alignment points
 			if sDic[sTreePos] == tDic[tTreePos][0] and -1 not in sDic[sTreePos] and -1 not in tDic[tTreePos][0]:
 				#print >> sys.stderr, 'pair\n'
 				allSubaList.append(Suba(sTreePos, tTreePos, sOffset, tOffset, sDic[sTreePos]))
