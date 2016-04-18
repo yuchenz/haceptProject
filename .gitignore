@@ -11,3 +11,7 @@ nohup.out
 *.gsuba*
 *.gwa*
 *.tex
+merge_waTex_subaF.py
+hacept_train.*
+hacept_test.*
+*koala*
