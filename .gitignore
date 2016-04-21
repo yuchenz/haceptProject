@@ -16,3 +16,6 @@ merge_waTex_subaF.py
 hacept_train.*
 hacept_test.*
 *koala*
+*.txt
+*training*
+*testing*
