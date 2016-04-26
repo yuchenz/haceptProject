@@ -3,11 +3,12 @@
 import sys, codecs
 import pdb
 import multiprocessing as mp
+import subprocess
 import time
 from feat import extractFeat
-from util import Example
+from util import Example, loadWordPairDict, loadFuncWordDict
 
-def extract(chSentL, enSentL, waL, baseID):
+def extract(chSentL, enSentL, waL, baseID, fwD, wpD):
 	expL = []
 	for k, chSent in enumerate(chSentL):
 		#print >> sys.stderr, k, 
@@ -20,7 +21,7 @@ def extract(chSentL, enSentL, waL, baseID):
 				if str(i) + '-' + str(j) in waSent:
 					label = "True"
 				exp = Example(ID, label)
-				exp.featList = extractFeat(i, j, chSent, enSent)
+				exp.featList = extractFeat(i, j, chSent, enSent, wpD, fwD)
 				expL.append(exp)
 
 	return expL
@@ -32,7 +33,10 @@ def makeFeatFile(chF, enF, waF, outF, numProc):
 
 	assert len(chSentL) == len(enSentL) == len(waL), \
 			"len chSentL == %d, len enSentL == %d, len waL == %d" % (len(chSentL), len(enSentL), len(waL))
-	
+
+	fwD = loadFuncWordDict("ch_funcWordL.txt")
+	wpD = loadWordPairDict("cedict_hacept_train.dict")
+
 	s = time.clock()
 	if numProc > 1:
 		pool = mp.Pool(processes = numProc)
@@ -41,14 +45,14 @@ def makeFeatFile(chF, enF, waF, outF, numProc):
 		for i in xrange(1, numProc + 1):
 			start = base * (i - 1)
 			end = base * i if i < numProc else len(chSentL)
-			tmp.append(pool.apply_async(extract, args=(chSentL[start:end], enSentL[start:end], waL[start:end], start)))
+			tmp.append(pool.apply_async(extract, args=(chSentL[start:end], enSentL[start:end], waL[start:end], start, fwD, wpD)))
 		
 		expList = []
 		for t in tmp:
 			expL = t.get()
 			expList.extend(expL)
 	else:
-		expList = extract(chSentL, enSentL, waL)
+		expList = extract(chSentL, enSentL, waL, 0, fwD, wpD)
 
 	print >> sys.stderr, "\nextraction time: %f" % (time.clock() - s)
 		
@@ -58,6 +62,7 @@ def makeFeatFile(chF, enF, waF, outF, numProc):
 		outf.write(exp.__str__())
 	outf.close()
 	print >> sys.stderr, "outputing time: %f" % (time.clock() - s)
+	subprocess.call("mv /dev/shm/tmp " + outF, shell=True)
 
 if __name__ == "__main__":
 	chF = sys.argv[1]

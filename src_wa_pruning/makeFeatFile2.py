@@ -14,7 +14,8 @@ def make(chF, enF, gwaF, waF, outF):
 	print "len of chSentL, enSentL, gwaL, waL: ", len(chSentL), len(enSentL), len(gwaL), len(waL)
 
 	fwD = loadFuncWordDict("ch_funcWordL.txt")
-	wpD = loadWordPairDict("hacept_train.dict")
+	wpD = loadWordPairDict("cedict_hacept_train.dict")
+	#wpD = loadWordPairDict("hacept_train.dict")
 
 	expList = []
 	for k, chSent in enumerate(chSentL):

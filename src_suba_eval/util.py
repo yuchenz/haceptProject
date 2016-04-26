@@ -192,6 +192,7 @@ def simplifyTree(tr):
 
 def oneline2waMatrix(line, srcLen, tgtLen):
 	# the numbers in line has start from 0
+	#print line, srcLen, tgtLen
 	line = [[item.split('-')[0].split(','), item.split('-')[1].split(',')] for item in line.split()]
 
 	wa = [[0 for j in xrange(tgtLen)] for i in xrange(srcLen)]

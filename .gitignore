@@ -10,6 +10,7 @@ nohup.out
 *.gizawa*
 *.gsuba*
 *.gwa*
+*.suba*
 *.tex
 *tmp*
 merge_waTex_subaF.py
@@ -17,5 +18,6 @@ hacept_train.*
 hacept_test.*
 *koala*
 *.txt
+*.dict
 *training*
 *testing*
