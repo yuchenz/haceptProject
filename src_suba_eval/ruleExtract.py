@@ -1,6 +1,7 @@
 #!/usr/bin/python2.7
 
 import re
+import pdb
 from Rule import Rule
 from util import oneline2waMatrix
 
@@ -152,6 +153,19 @@ def extractRules(chF, enF, subaF, waF):
 				rule = Rule(lhsSrc, lhsTgt, rhsSrc, rhsTgt, align, waMatrix, chSentList[i], enSentList[i], square) 
 				ruleList.append(rule)
 
+		# rules that are word alignments (i.e. word pairs) but not corresponding subtree alignments
+		#pdb.set_trace()
+		lhsSrc, lhsTgt = 'X', 'X'
+		rhsSrc, rhsTgt, align = [], [], []   # here align is for the alignment of Xs, not word alignment, so keep empty 
+		for item in waList[i].split():
+			k = int(item.split('-')[0])
+			j = int(item.split('-')[1])
+			if waMatrix[k][j]:
+				if sum(waMatrix[k]) == 1 and sum([row[j] for row in waMatrix]) == 1:
+					rhsSrc, rhsTgt = [k], [j]
+					if _isLegalRule_(rhsSrc, rhsTgt, chSentList[i], enSentList[i], "complete"):
+						rule = Rule(lhsSrc, lhsTgt, rhsSrc, rhsTgt, align, waMatrix, chSentList[i], enSentList[i], (k, k + 1, j, j + 1))
+						ruleList.append(rule)
 	return ruleList
 
 
@@ -187,4 +201,5 @@ if __name__ == "__main__":
 		print >> sys.stdout, a.encode('utf-8'),
 	for a in ans1:
 		print >> sys.stderr, a.encode('utf-8'),
+
 

@@ -76,7 +76,7 @@ class Rule:
 			return False
 	
 	def __str__(self):
-		tmp = self.lhs + ' -> ' + ' '.join([item.encode('utf-8') for item in self.rhsSrc]) + ' | ' + \
+		tmp = self.lhsSrc + ' ' + self.lhsTgt + ' -> ' + ' '.join([item.encode('utf-8') for item in self.rhsSrc]) + ' | ' + \
 				' '.join([item.encode('utf-8') for item in self.rhsTgt]) + ' | ' + \
 				' '.join([str(item) for item in self.alignment]) + \
 				' ||| covering ' +  str(self.square)
