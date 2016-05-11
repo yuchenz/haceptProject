@@ -6,7 +6,7 @@ waFile=../exp_wa_pruning/exp-stages.gdfa_pruned.testing.wa
 echo ========== removing all exp-stages.$ps.$wa.test.*
 mv exp-stages.$ps.$wa.test.* ~/.recycle/
 
-echo ========== extracting subtree pairs and features for the testing examples (slow ~ ?? min)
+echo ========== extracting subtree pairs and features for the testing examples (slow 2~3h)
 ../../src_suba_eval/makeFeatFile_fromCompiled.py ../../../temp2/stages.ch ../../../temp2/stages.en ../../../temp2/stages.ch.bps ../../../temp2/stages.en.bps $waFile None /dev/shm/exp-stages.$ps.$wa.test.feat
 mv /dev/shm/exp-stages.$ps.$wa.test.feat .
 
