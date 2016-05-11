@@ -354,6 +354,8 @@ class Bead:
 		if s2t: glueRuleList = []
 		# add in rules with non-terminal Xs
 		for key in self.subtreeAlignmentDic:
+			if len(self.subtreeAlignmentDic[key]) > 2:		# prune all rules with more than 2 Xs
+				continue
 			for subaList in util.allCombinations(self.subtreeAlignmentDic[key]):
 				#if self.verbose: print >> debug_log, key, ':', subaList
 				ruleType, tmpRule = self._extract_(key, subaList, s2t)
@@ -454,37 +456,37 @@ class Bead:
 		numXTgt = len([ele for ele in rhsTgt if isinstance(ele, str) and ele != 'placeHolder'])
 		#print 'koala!!!', rhsSrc, rhsTgt
 		if numXSrc > 2 or numXTgt > 2:
-			#if self.verbose: print >> debug_log, "illegal: more than 2 Xs",
+			if self.verbose: print >> debug_log, "illegal: more than 2 Xs"
 			return False
 		if len(rhsSrc) - numXSrc > 5 or len(rhsTgt) - numXTgt > 5:
-					#if self.verbose: print >> debug_log, "illegal: more than 5 terminals",
+					if self.verbose: print >> debug_log, "illegal: more than 5 terminals"
 					return False
 		if len(rhsSrc) - numXSrc < 1 or len(rhsTgt) - numXTgt < 1:
-					#if self.verbose: print >> debug_log, "illegal: less than 1 terminal",
+					if self.verbose: print >> debug_log, "illegal: less than 1 terminal"
 					return False
 		if numXSrc == 2:
 			Xpos = [i for i in xrange(len(rhsSrc)) if isinstance(rhsSrc[i], str)]
 			if abs(Xpos[0] - Xpos[1]) == 1:
-				#if self.verbose: print >> debug_log, "illegal: two Xs next to each other on rhsSrc",
+				if self.verbose: print >> debug_log, "illegal: two Xs next to each other on rhsSrc"
 				return False
 
 		for i in rhsSrc:
 			if (not isinstance(i, str)) and len(self.srcSnt[i]) > 40:
-				#if self.verbose: print >> debug_log, "illegal: src word longer than 40 characters",
+				if self.verbose: print >> debug_log, "illegal: src word longer than 40 characters"
 				return False
 			elif (not isinstance(i, str)) and '|' in self.srcSnt[i]:
-				#if self.verbose: print >> debug_log, "illegal: src side contains '|'",
+				if self.verbose: print >> debug_log, "illegal: src side contains '|'"
 				return False
 
 		for i in rhsTgt:
 			if (not isinstance(i, str)) and len(self.tgtSnt[i]) > 40:
-				#if self.verbose: print >> debug_log, "illegal: tgt word longer than 40 characters",
+				if self.verbose: print >> debug_log, "illegal: tgt word longer than 40 characters"
 				return False
 			elif (not isinstance(i, str)) and '|' in self.tgtSnt[i]:
-				#if self.verbose: print >> debug_log, "illegal: tgt side contains '|'",
+				if self.verbose: print >> debug_log, "illegal: tgt side contains '|'"
 				return False
 
-		#if self.verbose: print >> debug_log, "legal",
+		#if self.verbose: print >> debug_log, "legal"
 		return True
 
 
