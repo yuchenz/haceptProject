@@ -2,6 +2,7 @@
 
 import re
 import pdb
+import nltk
 
 def cleanData(rawData):
 	"""
@@ -70,4 +71,97 @@ def allCombinations(groupList):
 
 	return result
 
+def scanBlock(offset, lan, wa):
+	'''
+	given the offsets 'offset' of a phrase in language 'lan',
+	find the minimum block it covers in the word alignment matrix 'wa'
+	'''
+	if lan == 'tgt':
+		tmpWa = [[wa[i][j] for i in xrange(len(wa))] for j in xrange(len(wa[0]))] 
+	elif lan == 'src':
+		tmpWa = wa
+	else:
+		print >> sys.stderr, "illegal language in scanSpan(): ", lan
 	
+	x1, x2, y1, y2 = -1, -1, -1, -1 
+	for j in xrange(len(tmpWa[0])):
+		for i in xrange(offset[0], offset[1]):
+			#print len(tmpWa), len(tmpWa[0]), offset, i, j, lan
+			if tmpWa[i][j]:
+				y1 = j
+				break
+		else: continue
+		break
+
+	for j in xrange(len(tmpWa[0]) - 1, -1, -1):
+		for i in xrange(offset[0], offset[1]):
+			if tmpWa[i][j]:
+				y2 = j
+				break
+		else: continue
+		break
+
+	for i in xrange(offset[0], offset[1]):
+		for j in xrange(len(tmpWa[0])):
+			if tmpWa[i][j]:
+				x1 = i
+				break
+		else: continue
+		break
+
+	for i in xrange(offset[1] - 1, offset[0] - 1, -1):
+		for j in xrange(len(tmpWa[0])):
+			if tmpWa[i][j]:
+				x2 = i
+				break
+		else: continue
+		break
+
+	if lan == 'tgt':
+		return (y1, y2, x1, x2)
+	else:
+		return (x1, x2, y1, y2)
+
+def simplifyTree(tr):
+	'''
+	if a subtree in this tree has only one child, combine the subtree's node label and the child's node label,
+	and reduce a level of the subtree (keep POS tags for words)
+
+	e.g.
+
+	input: "(TOP (S (NP (NN (XX I))) (VP (XX (VV love) (NP (XX (NN python)))))))"
+	output: "(TOP+S (NP+NN (XX I)) (VP+XX (VV love) (NP+XX (NN python))))" 
+	
+	'''
+	stack = [tr]
+	while stack:
+		pointer = stack.pop() 
+		if pointer.height() <= 2:
+			continue
+		while len(list(pointer)) == 1:
+			if pointer.height() <= 3:
+				break
+			child = pointer[0]
+			pointer.node += '+' + child.node 
+			pointer.pop()
+			for ch in child:
+				ch._parent = None
+				pointer.append(ch)
+		else:
+			for child in pointer:
+				stack.append(child)
+
+	return 
+
+def treePosition2offset(treePos, treeRoot):
+	cnt = 0
+	parent = treeRoot[treePos]
+	while parent != treeRoot:
+		for i in xrange(parent.parent_index()):
+			if isinstance(parent.parent()[i], nltk.ParentedTree):
+				cnt += len(parent.parent()[i].leaves())
+			else:
+				print >> sys.stderr, treeRoot
+		parent = parent.parent()
+	return (cnt, cnt + len(treeRoot[treePos].leaves()))
+

@@ -9,6 +9,7 @@ import os
 import time
 from Bead import Bead
 from glueRules import extractLabels
+from util import simplifyTree, treePosition2offset, scanBlock
 
 MAX=int(10e5)
 MIN=int(-10e5)
@@ -358,10 +359,36 @@ class SntFrame:
 		"""
 		Return a list of Frame instances.
 
-		The algorithm used here is explained in details in frameExtractionAlgorithm.pdf
-
 		"""
 		#pdb.set_trace()
+		simplifyTree(self.srcTree)
+		simplifyTree(self.tgtTree)
+
+		sDic, tDic = {}, {}
+		frameSet = set() 
+		for sSubtr in self.srcTree.subtrees():
+			if sSubtr.height() <= 2:
+				continue
+
+			sTreePos = sSubtr.treeposition()
+			sOffset = treePosition2offset(sTreePos, self.srcTree)
+			sDic[sTreePos] = scanBlock(sOffset, 'src', self.waMatrix)
+
+			for tSubtr in self.tgtTree.subtrees():
+				if tSubtr.height() <= 2:
+					continue
+
+				tTreePos = tSubtr.treeposition()
+				if tTreePos not in tDic:
+					tOffset = treePosition2offset(tTreePos, self.tgtTree)
+					tDic[tTreePos] = scanBlock(tOffset, 'tgt', self.waMatrix)
+				else:
+					tOffset = tDic[tTreePos]
+
+				if sDic[sTreePos] == tDic[tTreePos] and -1 not in sDic[sTreePos] and -1 not in tDic[tTreePos]:
+					frameSet.add(Frame([sTreePos], [tTreePos], self.srcTree, self.tgtTree))
+
+		'''
 		srcSubtreeSpanDict = self._extractSubtreeSpan_(self.srcTree, wordRulesFlag)
 		tgtSubtreeSpanDict = self._extractSubtreeSpan_(self.tgtTree, wordRulesFlag)
 
@@ -384,7 +411,7 @@ class SntFrame:
 				if srcSpan in srcSubtreeSpanDict:
 					#print >> debug_log, srcSpan, span
 					frameSet.add(Frame([srcSubtreeSpanDict[srcSpan]], [tgtSubtreeSpanDict[span]], self.srcTree, self.tgtTree))
-
+		'''
 		#pdb.set_trace()
 		frameList = self._mergeFrames_(frameSet)
 		return frameList
