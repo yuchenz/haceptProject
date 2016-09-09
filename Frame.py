@@ -244,6 +244,10 @@ class SntFrame:
 			for frame in self.frameList:
 				print frame.subtreeAlignment_waMatrixPos
 			print >> debug_log
+			#print >> debug_log, 'src tree:'
+			#print >> debug_log, self.srcTree
+			#print >> debug_log, 'tgt tree:'
+			#print >> debug_log, self.tgtTree
 
 		self.ruleList = []
 		if s2t: self.glueRuleList = []
@@ -385,8 +389,12 @@ class SntFrame:
 				else:
 					tOffset = tDic[tTreePos]
 
+				#print >> debug_log, self.srcTree[sTreePos]
+				#print >> debug_log, self.tgtTree[tTreePos]
 				if sDic[sTreePos] == tDic[tTreePos] and -1 not in sDic[sTreePos] and -1 not in tDic[tTreePos]:
+					#print >> debug_log, 'paird up!!'
 					frameSet.add(Frame([sTreePos], [tTreePos], self.srcTree, self.tgtTree))
+				#print >> debug_log
 
 		'''
 		srcSubtreeSpanDict = self._extractSubtreeSpan_(self.srcTree, wordRulesFlag)
@@ -414,6 +422,7 @@ class SntFrame:
 		'''
 		#pdb.set_trace()
 		frameList = self._mergeFrames_(frameSet)
+		#print >> debug_log, len(frameList)
 		return frameList
 
 	def _extractSubtreeSpan_(self, tree, wordRulesFlag):
@@ -522,19 +531,18 @@ class SntFrame:
 
 		"""
 		mergedList = [] 
-		while frameSet != set():
-			currentFrame = frameSet.pop()
-			#print currentFrame.srcList
-			#print currentFrame.tgtList
-			flag = False
+		frameList = list(frameSet)
+		frameList.sort()
+		for currentFrame in frameList:
+			#print [currentFrame.srcTree[pos].leaves() for pos in currentFrame.srcList]
+			#print [currentFrame.tgtTree[pos].leaves() for pos in currentFrame.tgtList]
 			for frame in mergedList:
 				if frame.mergable(currentFrame):
 					#print "merge"
 					mergedList.remove(frame)
 					mergedList.append(Frame.merge(frame, currentFrame))
-					flag = True
 					break
-			if not flag:
+			else:
 				#print "append"
 				mergedList.append(currentFrame)
 			#print 
