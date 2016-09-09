@@ -8,7 +8,10 @@ from feat import extractFeat
 def make(chF, enF, gwaF, waF, outF):
 	chSentL = [line.split() for line in codecs.open(chF, 'r', 'utf-8').readlines()]
 	enSentL = [line.split() for line in codecs.open(enF, 'r', 'utf-8').readlines()]
-	gwaL = [line.split() for line in open(gwaF).readlines()]
+	if gwaF == "None":
+		gwaL = [[] for i in xrange(len(chSentL))]
+	else:
+		gwaL = [line.split() for line in open(gwaF).readlines()]
 	waL = [line.split() for line in open(waF).readlines()]
 
 	print "len of chSentL, enSentL, gwaL, waL: ", len(chSentL), len(enSentL), len(gwaL), len(waL)

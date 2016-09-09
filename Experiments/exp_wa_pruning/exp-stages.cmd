@@ -8,7 +8,7 @@ echo ========== getting $wa-inter difference wa points from the test data set as
 ../../src_wa_pruning/diff_waF.py ../../../temp2/stages.${wa}WA ../../../temp2/stages.interWA exp-stages.$wa-inter.testing.wa
 
 echo ========== extracting features for the testing examples
-../../src_wa_pruning/makeFeatFile2.py ../../../temp2/stages.ch ../../../temp2/stages.en ../../../temp2/stages.interWA exp-stages.$wa-inter.testing.wa /dev/shm/exp-stages.$wa-inter.testing.feat
+../../src_wa_pruning/makeFeatFile2.py ../../../temp2/stages.ch ../../../temp2/stages.en None exp-stages.$wa-inter.testing.wa /dev/shm/exp-stages.$wa-inter.testing.feat
 mv /dev/shm/exp-stages.gdfa-inter.testing.feat .
 
 echo ========== classifying the testing examples
